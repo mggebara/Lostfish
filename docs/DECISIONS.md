@@ -58,3 +58,27 @@ Append-only. One entry per change that affects play strength, architecture, or s
 - Decision: do not deploy steering on Lichess yet (bot stays passthrough). Pending decomposition, queued:
   oracle runs (exact-depth opponent model) and variants tolerance=15 cp and λ=0 (pure exploit search).
 - Lichess passthrough after 35 rated blitz games: 6 wins, 29 draws, 0 losses.
+
+## 2026-10-20 — Oracle runs: steering loses even with the exact opponent model
+
+- `experiments/oracle_d{8,10,12,14}`: LostFish-steer given `profiles/sf-d{d}.json` (proxy = Stockfish at the
+  opponent's exact depth) vs SF-d{d}, Stockfish 19 as matched seed, 64 games per seed per opponent:
+
+  | opponent | LostFish-oracle | Stockfish | diff |
+  | --- | --- | --- | --- |
+  | SF-d8  | 92.2% | 97.7% | −5.5 |
+  | SF-d10 | 84.4% | 90.6% | −6.2 |
+  | SF-d12 | 69.5% | 77.3% | −7.8 |
+  | SF-d14 | 64.8% | 65.6% | −0.8 |
+  | **all** | **77.7%** | **82.8%** | **−5.1 (±6.7)** |
+
+  Head-to-head LostFish vs Stockfish 111/256 (43.4%). 0 time losses / illegal moves.
+- **The Phase 2 thesis fails at this budget as implemented**: a perfect depth model does not rescue steering v1.
+  Against d8–d12 Stockfish already scores 90–98%, so deviating from its best move can only lose points
+  (ceiling effect); against d14, where there is room, the effect is ≈ 0. Suspects, in order: (1) the 30 cp
+  tolerance is far too loose for 600k-node evals; (2) winner's curse — picking the max of K noisy 150k-node
+  "eval after predicted reply" estimates selects noise; (3) the proxy's reply may not match the opponent's
+  actual reply (hash carry-over makes a fixed-depth engine effectively deeper). (3) is measurable offline from
+  telemetry + PGNs; (1)/(2) via the queued tolerance=15 and λ=0 variants.
+- Decision: steering stays off on Lichess. No new complexity until the decomposition explains the loss.
+- Lichess passthrough: 55 rated blitz games, 10 wins, 45 draws, 0 losses, 0 time losses by us.
