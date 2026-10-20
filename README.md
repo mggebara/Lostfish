@@ -1,5 +1,7 @@
 # LostFish
 
+*Implemented with Claude Code.*
+
 An adversarial chess engine. LostFish does not try to play the best move; it tries to steer games into positions its *specific opponent* misjudges, while a strong engine certifies that every move it plays stays within a safety margin of the best one.
 
 LostFish is a UCI engine, so it runs anywhere Stockfish does: Lichess (via `lichess-bot`), `fastchess`/`cutechess-cli`, or a GUI.
