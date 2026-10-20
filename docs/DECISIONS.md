@@ -101,3 +101,18 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   (tolerance 0: no steering, same MultiPV=5 search) to measure that cost directly. If tol0 ≈ −5 pts, steering
   is neutral-to-positive and the protocol must compensate MultiPV (e.g. K=3, or certify nodes × MultiPV cost
   factor); if tol0 ≈ 0, the deviations themselves are the loss.
+
+## 2026-10-20 — Variant results at shutdown; steering deployed on Lichess
+
+- `gauntlet_v1_tol15` (complete, 1,088 games): LostFish-steer 77.0% vs Stockfish 80.6% → **−3.6 (±4.7)**.
+  Halving the tolerance recovered less than a point of the −4.4 seen at 30 cp, consistent with a loss that is
+  mostly *not* proportional to how far steering deviates (i.e. the MultiPV certifier cost).
+- `gauntlet_v1_lambda0` interrupted at 209 games (machine shutdown): −1.6 (±10.8), uninformative. Re-run.
+- `gauntlet_v1_tol0` (the decisive MultiPV-cost measurement) not started. **Run first next session:**
+  `nohup scripts/run_queue.sh experiments/gauntlet_v1_tol0 experiments/gauntlet_v1_lambda0 > logs/queue.log 2>&1 &`
+- Lichess: steering switched ON at 07:15 (rendered config `Steering: true`, blitz only). Steering era so far:
+  12 rated games, 5 wins, 7 draws, 0 losses (passthrough era: 55 games, 10W 45D 0L). Too few to compare, but
+  no time losses and no errors with 3 engines per move under load. Restart with `scripts/run_lichess_bot.sh`.
+- Open items: fix the fingerprint depth cap (re-annotate ~50 games/bot at 200k nodes), make `uci.py` emit an
+  `info depth/nodes/score/pv` line before `bestmove` (PGNs currently show n=0 for LostFish), build a bot-like
+  local field (Maia via Lc0, weak open-source engines), and Phase 3 training on the 549k annotated positions.
