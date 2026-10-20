@@ -42,3 +42,19 @@ Append-only. One entry per change that affects play strength, architecture, or s
 - LostFish's own overhead per move: median 0.3 ms, max 9 ms (telemetry). fastchess `--compliance` 40/40.
 - Lichess: Lostfish-bot deployed in passthrough mode, blitz only while the CPU is shared; first 4 rated
   games 1 win 3 draws, no time losses. Kept as the baseline configuration.
+
+## 2026-10-20 — Phase 2 gauntlet v1: steering with the generic profile LOSES to plain Stockfish
+
+- `experiments/gauntlet_v1` (1,088 games, 4h13m, 0 time losses/illegal moves). Score vs the 8-engine field,
+  512 games per seed, identical openings: **LostFish-steer 74.0% vs Stockfish 78.4% (−4.4 pts, ~±4.7 at 95%)**;
+  fastchess Elo 152.7±24.2 vs 199.8±25.3 (≈ −47 Elo). Head-to-head 28/64 (43.8%). Per opponent LostFish
+  was behind or equal everywhere: d8 −5.5, d10 −7.0, d12 −9.4, d14 −2.3, elo3000 −3.1, elo2600 0.0.
+- **Gate failed.** With a generic opponent model (proxy depth 12 for everyone, weak clusters from pooled bots),
+  deliberately choosing moves up to 30 cp below Stockfish's best costs more than the predicted-reply exploitation
+  gains. Steering chose a non-top move on ~26% of moves with >1 candidate (telemetry).
+- Field bug: `SF-n150k` and `SF-n300k` produced identical games/pentanomials ([0,0,55,9,0]); the shared
+  `nodes=600000` under `[each]` overrode their per-engine limits, so both were full-strength Stockfish.
+  The depth-limited and Elo-limited opponents were correct. Fixed in the variant configs (nodes per engine).
+- Decision: do not deploy steering on Lichess yet (bot stays passthrough). Pending decomposition, queued:
+  oracle runs (exact-depth opponent model) and variants tolerance=15 cp and λ=0 (pure exploit search).
+- Lichess passthrough after 35 rated blitz games: 6 wins, 29 draws, 0 losses.

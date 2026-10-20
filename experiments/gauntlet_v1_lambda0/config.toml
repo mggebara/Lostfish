@@ -21,13 +21,14 @@ tbpieces = 5
 extra_args = ["-tournament", "gauntlet", "-seeds", "2"]
 
 [each]
-nodes = 600000
+# nodes set per engine: a shared `nodes` under [each] overrode the per-engine limits in gauntlet_v1
 
 # ---- seeds -----------------------------------------------------------------
 [[engine]]
 name = "LostFish-steer"
 cmd = "scripts/lostfish"
 args = "--config configs/variants/lambda0.yaml"
+nodes = 600000
 [engine.options]
 Steering = true
 Hash = 64
@@ -36,6 +37,7 @@ SyzygyPath = "{root}/tb/syzygy"
 [[engine]]
 name = "Stockfish"
 cmd = "engines/stockfish"
+nodes = 600000
 [engine.options]
 Threads = 1
 Hash = 64
@@ -95,6 +97,7 @@ Hash = 16
 [[engine]]
 name = "SF-elo2600"
 cmd = "engines/stockfish"
+nodes = 600000
 [engine.options]
 Threads = 1
 Hash = 16
@@ -104,6 +107,7 @@ UCI_Elo = 2600
 [[engine]]
 name = "SF-elo3000"
 cmd = "engines/stockfish"
+nodes = 600000
 [engine.options]
 Threads = 1
 Hash = 16
