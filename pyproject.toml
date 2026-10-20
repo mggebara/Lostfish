@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lostfish"
+version = "0.0.1"
+description = "Adversarial chess engine: steers games into positions a specific opponent misjudges."
+requires-python = ">=3.11"
+dependencies = [
+  "python-chess>=1.10",
+  "pyyaml>=6",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5", "pytest-timeout"]
+mining = ["requests>=2.31", "pandas>=2", "pyarrow>=15", "zstandard"]
+training = ["torch>=2.2"]
+
+[project.scripts]
+lostfish = "lostfish.uci:main"
+
+[tool.setuptools]
+packages = ["lostfish", "mining", "training"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+markers = ["slow: needs engine binaries"]
+timeout = 120

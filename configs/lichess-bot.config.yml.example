@@ -1,0 +1,20 @@
+# Copy to configs/lichess-bot.config.yml (gitignored) and fill in. Keys follow lichess-bot's config.yml.default;
+# check that file for the current schema before relying on this example.
+token: "${LICHESS_BOT_TOKEN}"
+url: "https://lichess.org/"
+engine:
+  dir: "../../"
+  name: "lostfish"              # wrapper script that runs `python -m lostfish.uci`
+  protocol: "uci"
+  ponder: false
+challenge:
+  concurrency: 1
+  accept_bot: true
+  only_bot: true
+  time_controls: ["bullet", "blitz"]
+  modes: ["rated"]
+matchmaking:
+  allow_matchmaking: true
+  challenge_timeout: 30
+  opponent_rating_difference: 300
+  opponent_allow_tos_violation: false
