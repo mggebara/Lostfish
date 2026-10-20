@@ -34,7 +34,7 @@ DATA_DIR = REPO_ROOT / "data"
 CONFIG_PATH = REPO_ROOT / "configs" / "lostfish.yaml"
 
 MATE_CP = 32000
-USER_AGENT = "LostFish-mining (research; github.com/mggebara/LostFish)"
+USER_AGENT = "LostFish-mining (research; github.com/mggebara/Lostfish)"
 
 MINING_DEFAULTS: dict[str, Any] = {
     "stockfish": "engines/stockfish",
