@@ -29,5 +29,6 @@ line-length = 100
 target-version = "py311"
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 markers = ["slow: needs engine binaries"]
 timeout = 120
