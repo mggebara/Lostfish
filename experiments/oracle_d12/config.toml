@@ -1,0 +1,43 @@
+# Oracle test: LostFish-steer told the exact opponent model (profile sf-d12: Stockfish at depth 12) vs SF-d12.
+# Stockfish is the matched baseline seed (same openings). If steering cannot beat Stockfish even with a
+# perfect opponent model, the thesis fails at this budget. 32 rounds x 2 games per seed.
+rounds = 32
+games = 2
+concurrency = 4
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261019
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+extra_args = ["-tournament", "gauntlet", "-seeds", "2"]
+
+[each]
+nodes = 600000
+
+[[engine]]
+name = "LostFish-oracle-d12"
+cmd = "scripts/lostfish"
+[engine.options]
+Steering = true
+Profile = "sf-d12"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+[engine.options]
+Threads = 1
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "SF-d12"
+cmd = "engines/stockfish"
+depth = 12
+[engine.options]
+Threads = 1
+Hash = 16
