@@ -20,3 +20,4 @@ experiments/**/*.pgn.gz
 experiments/openings/*.pgn
 experiments/**/config.json
 experiments/**/*.log
+experiments/**/command.txt
