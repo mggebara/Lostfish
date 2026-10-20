@@ -82,3 +82,22 @@ Append-only. One entry per change that affects play strength, architecture, or s
   telemetry + PGNs; (1)/(2) via the queued tolerance=15 and λ=0 variants.
 - Decision: steering stays off on Lichess. No new complexity until the decomposition explains the loss.
 - Lichess passthrough: 55 rated blitz games, 10 wins, 45 draws, 0 losses, 0 time losses by us.
+
+## 2026-10-20 — Why steering loses: offline decomposition (scripts/proxy_accuracy.py)
+
+Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-move mismatches):
+- **The "oracle" proxy is not an oracle.** Stockfish at the opponent's exact depth (fresh 16 MB hash) predicts
+  the opponent's actual reply only 50.7% (d8) / 55.2% (d10) / 59.6% (d12) / 58.7% (d14) top-1, 70–78% top-2.
+  The generic d12 proxy does the same (55.3%). Hash carry-over makes a fixed-depth engine effectively deeper and
+  less predictable than a cold search at that depth.
+- **Predicted gains are fantasy, realised gains are small but real.** When steering deviated (≈20% of moves,
+  giving up a median 4 cp / mean 6 cp certified), the proxy predicted +361 cp (d8) … +42 cp (d14) edges;
+  realised change in our next certified eval was +14.6 (d8) / +10.3 / +7.7 / +6.2 cp vs +6.1 / +4.2 / +2.5 /
+  +1.9 cp for non-deviated moves. Net: deviations gain ≈ +4–8 cp more than passthrough moves at the eval level.
+  Classic winner's curse on 150k-node evals of proxy-predicted blunders, but the sign is right.
+- **So the −5 pts must come from somewhere steering-independent.** Prime suspect: the certifier searches with
+  MultiPV=5 at 600k nodes, and its rank-1 move is weaker than a single-PV 600k search — on *every* move,
+  including the ~45% single-candidate passthrough moves. Queued `experiments/gauntlet_v1_tol0`
+  (tolerance 0: no steering, same MultiPV=5 search) to measure that cost directly. If tol0 ≈ −5 pts, steering
+  is neutral-to-positive and the protocol must compensate MultiPV (e.g. K=3, or certify nodes × MultiPV cost
+  factor); if tol0 ≈ 0, the deviations themselves are the loss.
