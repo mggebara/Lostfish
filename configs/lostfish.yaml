@@ -40,7 +40,7 @@ timeman:
   increment_fraction: 0.8
   min_move_ms: 50
   reserve_ms: 300
-  nps_estimate: 1000000      # Stockfish nodes/s at Threads=1 (M1 Pro ~1.1M); converts ms -> nodes
+  nps_estimate: 700000      # Stockfish nodes/s at Threads=1 (M1 Pro ~1.1M); converts ms -> nodes
 
 profiles:
   dir: profiles

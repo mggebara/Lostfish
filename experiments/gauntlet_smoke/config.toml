@@ -1,0 +1,59 @@
+# smoke copy of gauntlet_v1 (2 opponents, 1 round, 100k nodes)
+# Phase 2 core experiment: LostFish (Steering=true, _generic profile) and plain Stockfish 19 are the
+# two gauntlet seeds; both play the same field with the same openings (fastchess picks the opening per
+# round, so the seeds see identical positions). Metric = LostFish score - Stockfish score vs the field.
+# Field mimics the Lichess bot population with Stockfish variants: depth-limited (shallow searchers)
+# and UCI_Elo-limited (noisy move choice). Certifier and baseline both get 600k nodes (blitz class).
+# 8 opponents x 32 rounds x 2 games = 512 games per seed.
+# Run: nohup scripts/run_gauntlet.sh experiments/gauntlet_v1 > experiments/gauntlet_v1/run.log 2>&1 &
+rounds = 1
+games = 2
+concurrency = 2
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261019
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+extra_args = ["-tournament", "gauntlet", "-seeds", "2"]
+
+[each]
+nodes = 100000
+
+# ---- seeds -----------------------------------------------------------------
+[[engine]]
+name = "LostFish-steer"
+cmd = "scripts/lostfish"
+[engine.options]
+Steering = true
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+[engine.options]
+Threads = 1
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+# ---- field: shallow searchers -----------------------------------------------
+[[engine]]
+name = "SF-d6"
+cmd = "engines/stockfish"
+depth = 6
+[engine.options]
+Threads = 1
+Hash = 16
+
+[[engine]]
+name = "SF-elo2000"
+cmd = "engines/stockfish"
+[engine.options]
+Threads = 1
+Hash = 16
+UCI_LimitStrength = true
+UCI_Elo = 2000
+

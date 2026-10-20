@@ -1,0 +1,109 @@
+# Phase 2 core experiment: LostFish (Steering=true, _generic profile) and plain Stockfish 19 are the
+# two gauntlet seeds; both play the same field with the same openings (fastchess picks the opening per
+# round, so the seeds see identical positions). Metric = LostFish score - Stockfish score vs the field.
+# Field mimics the Lichess bot population with Stockfish variants: depth-limited (shallow searchers),
+# node-limited near-peers, and UCI_Elo-limited (noisy move choice). Trivially weak opponents (d4, d6,
+# Elo<2600) were dropped after the smoke run: both seeds score ~100% there, so they carry no signal. Certifier and baseline both get 600k nodes (blitz class).
+# 8 opponents x 32 rounds x 2 games = 512 games per seed.
+# Run: nohup scripts/run_gauntlet.sh experiments/gauntlet_v1 > experiments/gauntlet_v1/run.log 2>&1 &
+rounds = 32
+games = 2
+concurrency = 4
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261019
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+extra_args = ["-tournament", "gauntlet", "-seeds", "2"]
+
+[each]
+nodes = 600000
+
+# ---- seeds -----------------------------------------------------------------
+[[engine]]
+name = "LostFish-steer"
+cmd = "scripts/lostfish"
+[engine.options]
+Steering = true
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+[engine.options]
+Threads = 1
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+# ---- field: shallow searchers -----------------------------------------------
+[[engine]]
+name = "SF-d8"
+cmd = "engines/stockfish"
+depth = 8
+[engine.options]
+Threads = 1
+Hash = 16
+
+[[engine]]
+name = "SF-d10"
+cmd = "engines/stockfish"
+depth = 10
+[engine.options]
+Threads = 1
+Hash = 16
+
+[[engine]]
+name = "SF-d12"
+cmd = "engines/stockfish"
+depth = 12
+[engine.options]
+Threads = 1
+Hash = 16
+
+[[engine]]
+name = "SF-d14"
+cmd = "engines/stockfish"
+depth = 14
+[engine.options]
+Threads = 1
+Hash = 16
+
+# ---- field: node-limited near-peers -----------------------------------------
+[[engine]]
+name = "SF-n150k"
+cmd = "engines/stockfish"
+nodes = 150000
+[engine.options]
+Threads = 1
+Hash = 16
+
+[[engine]]
+name = "SF-n300k"
+cmd = "engines/stockfish"
+nodes = 300000
+[engine.options]
+Threads = 1
+Hash = 16
+
+# ---- field: strength-limited (noisy move choice) ----------------------------
+[[engine]]
+name = "SF-elo2600"
+cmd = "engines/stockfish"
+[engine.options]
+Threads = 1
+Hash = 16
+UCI_LimitStrength = true
+UCI_Elo = 2600
+
+[[engine]]
+name = "SF-elo3000"
+cmd = "engines/stockfish"
+[engine.options]
+Threads = 1
+Hash = 16
+UCI_LimitStrength = true
+UCI_Elo = 3000
