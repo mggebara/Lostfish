@@ -33,3 +33,12 @@ Append-only. One entry per change that affects play strength, architecture, or s
 - `experiments/oracle_d{8,10,12,14}`: same, but LostFish is given the exact opponent model
   (`profiles/sf-d*.json`). Tests the thesis with a perfect proxy; if it fails here it fails at this budget.
 - fastchess does not send `UCI_Opponent`, so local profiles are selected via the `Profile` option.
+
+## 2026-10-19 — Phase 0 gate (local): passthrough baseline
+
+- `experiments/phase0_passthrough`: LostFish (Steering=false) vs Stockfish 19, both 600k nodes, 8moves_v3
+  openings, 100 rounds × 2. Result: 100.0/200 (50.00%), 8 wins, 8 losses, 184 draws; 0 time losses,
+  0 illegal moves, 0 crashes. Every colour-reversed pair mirrored, so the wrapper is faithful.
+- LostFish's own overhead per move: median 0.3 ms, max 9 ms (telemetry). fastchess `--compliance` 40/40.
+- Lichess: Lostfish-bot deployed in passthrough mode, blitz only while the CPU is shared; first 4 rated
+  games 1 win 3 draws, no time losses. Kept as the baseline configuration.

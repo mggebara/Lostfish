@@ -10,7 +10,9 @@ LostFish is a UCI engine, so it runs anywhere Stockfish does: Lichess (via `lich
 
 ## Status
 
-Phase 0 (passthrough engine playing on Lichess) — not started.
+- **Phase 0 (passthrough engine)** — done. Valid UCI engine; 200-game match vs Stockfish 19 at equal nodes: 50.0%, 0 time losses. Deployed on Lichess as `Lostfish-bot`.
+- **Phase 1 (opponent mining)** — pipeline done; 40 bots fetched, profiles built. Depth fingerprint is capped by the 20k-node annotation (see `docs/DECISIONS.md`).
+- **Phase 2 (steering v1)** — implemented (`docs/STEERING.md`); gauntlet vs an 8-engine field running. Thesis unmeasured until it finishes.
 
 ## Quick start
 
