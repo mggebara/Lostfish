@@ -1,0 +1,30 @@
+# Phase 0 smoke test: LostFish passthrough (Steering=false) vs Stockfish at equal nodes.
+# 5 rounds x 2 games (same opening, colours reversed). Run: scripts/run_gauntlet.sh experiments/smoke
+rounds = 5
+games = 2
+concurrency = 4
+openings = "experiments/openings/8moves_v3.pgn"   # scripts/fetch_openings.sh
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 1
+ratinginterval = 10
+
+[each]
+nodes = 50000
+
+[[engine]]
+name = "LostFish"
+cmd = "scripts/lostfish"
+[engine.options]
+Steering = false
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+[engine.options]
+Threads = 1
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"

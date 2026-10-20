@@ -17,3 +17,6 @@ lostfish-seed.zip
 engines/_dl/
 *.egg-info/
 experiments/**/*.pgn.gz
+experiments/openings/*.pgn
+experiments/**/config.json
+experiments/**/*.log

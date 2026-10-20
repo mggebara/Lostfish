@@ -4,7 +4,7 @@ This file pins the signatures that modules depend on across ownership boundaries
 change one, change it here first and tell the coordinator. Everything below is Python 3.11,
 type-hinted, `python-chess` types. **All centipawn values that leave `engines.py` are from the
 `pov` colour's point of view** (LostFish's colour in play). Mate scores map to
-`±(MATE_CP - plies)` with `MATE_CP = 32000`.
+`±(MATE_CP - moves)` with `MATE_CP = 32000` (python-chess `mate_score` semantics; `engines.is_mate_cp` tests |cp| ≥ 31000).
 
 ## lostfish/config.py
 

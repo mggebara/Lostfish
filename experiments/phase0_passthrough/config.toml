@@ -1,0 +1,32 @@
+# Phase 0 gate (local): LostFish passthrough (Steering=false) vs Stockfish 19 at equal nodes.
+# 100 rounds x 2 games = 200 games, 8-move book openings, colours reversed per pair.
+# Expect 50% (the passthrough plays Stockfish's own bestmove, so pairs should mirror).
+# Run: nohup scripts/run_gauntlet.sh experiments/phase0_passthrough > experiments/phase0_passthrough/run.log 2>&1 &
+rounds = 100
+games = 2
+concurrency = 4
+openings = "experiments/openings/8moves_v3.pgn"   # scripts/fetch_openings.sh
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261019
+ratinginterval = 10
+
+[each]
+nodes = 600000
+
+[[engine]]
+name = "LostFish"
+cmd = "scripts/lostfish"
+[engine.options]
+Steering = false
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+[engine.options]
+Threads = 1
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"

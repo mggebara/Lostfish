@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# LostFish UCI engine launcher (used by fastchess, lichess-bot and GUIs).
+# Runs from the repo root so relative paths in configs/lostfish.yaml resolve.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+PY="$ROOT/.venv/bin/python"
+[[ -x "$PY" ]] || PY="$(command -v python3)"
+exec "$PY" -m lostfish.uci "$@"

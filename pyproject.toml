@@ -30,5 +30,6 @@ target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not slow'"   # `pytest -m slow` still runs the engine tests (last -m wins)
 markers = ["slow: needs engine binaries"]
 timeout = 120
