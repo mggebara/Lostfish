@@ -9,7 +9,7 @@ cd "$ROOT"
 
 SF_TAG="${SF_TAG:-sf_19}"
 FC_TAG="${FC_TAG:-v1.8.2-alpha}"
-SYZYGY_URL="${SYZYGY_URL:-https://tablebase.lichess.ovh/tables/standard/3-4-5}"
+SYZYGY_BASE="${SYZYGY_BASE:-https://tablebase.lichess.ovh/tables/standard}"   # has 3-4-5-wdl/ and 3-4-5-dtz/
 WITH_SYZYGY=0
 for a in "$@"; do [[ "$a" == "--syzygy" ]] && WITH_SYZYGY=1; done
 
@@ -58,15 +58,17 @@ echo "fastchess: $(engines/fastchess --version 2>&1 | head -1)"
 # --- Syzygy 3-4-5 -------------------------------------------------------------
 if [[ "$WITH_SYZYGY" == 1 ]]; then
   mkdir -p tb/syzygy
-  LIST="$(curl -fsL "$SYZYGY_URL/" | grep -oE 'href="K[A-Z]*v[A-Z]*\.rtb[wz]"' | sed -E 's/href="(.*)"/\1/' | sort -u)"
-  N="$(echo "$LIST" | wc -l | tr -d ' ')"
-  echo "syzygy: $N files"
-  i=0
-  for f in $LIST; do
-    i=$((i+1))
-    [[ -s "tb/syzygy/$f" ]] && continue
-    printf '[%3d/%s] %s\n' "$i" "$N" "$f"
-    curl -fsL --retry 5 -C - -o "tb/syzygy/$f.part" "$SYZYGY_URL/$f" && mv "tb/syzygy/$f.part" "tb/syzygy/$f"
+  for sub in 3-4-5-wdl 3-4-5-dtz; do
+    LIST="$(curl -fsL "$SYZYGY_BASE/$sub/" | grep -oE 'href="K[A-Z]*v[A-Z]*\.rtb[wz]"' | sed -E 's/href="(.*)"/\1/' | sort -u)"
+    N="$(echo "$LIST" | wc -l | tr -d ' ')"
+    echo "syzygy $sub: $N files"
+    i=0
+    for f in $LIST; do
+      i=$((i+1))
+      [[ -s "tb/syzygy/$f" ]] && continue
+      printf '[%3d/%s] %s\n' "$i" "$N" "$f"
+      curl -fsL --retry 5 -C - -o "tb/syzygy/$f.part" "$SYZYGY_BASE/$sub/$f" && mv "tb/syzygy/$f.part" "tb/syzygy/$f"
+    done
   done
   echo "syzygy: $(ls tb/syzygy | wc -l | tr -d ' ') files, $(du -sh tb/syzygy | cut -f1)"
 fi
