@@ -1,4 +1,4 @@
-# Variant: tolerance 0 -> always plays rank-1 of the MultiPV=K certify search. Isolates the cost of
+# Variant: tolerance 0 + min_gain 100000 -> always plays rank-1 of the MultiPV=K certify search (ties included). Isolates the cost of
 # searching with MultiPV=5 vs Stockfish's single-PV search at equal nodes (no steering happens).
 # All tunables live here. Pin engine versions so results are reproducible.
 engines:
@@ -23,7 +23,7 @@ certify:
   expand_when_ahead: 0.5     # ... by up to +50 %, reached at 2 x expand_when_ahead_cp
 
 steer:
-  lambda_weakness: 0.15      # weight of profile weakness-match relative to expected eval
+  lambda_weakness: 0.0      # weight of profile weakness-match relative to expected eval
   proxy_depth_cap: 12
   replies: 2                 # top-N predicted opponent replies evaluated per candidate
   reply_temperature_cp: 100  # softmax temperature over the proxy's MultiPV scores
