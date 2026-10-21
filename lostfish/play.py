@@ -196,7 +196,13 @@ class SteeringPlayer:
             record["error"] = f"chosen move {move} is illegal; " + record.get("error", "")
             move = self._emergency_move(board, budget, None)
         record["chosen"] = move.uci()
-        record["candidates"] = _candidate_rows(certified, scored)
+        depth_reached = max(certified.eval_by_depth, default=None) if certified else None
+        record["candidates"] = _candidate_rows(
+            certified,
+            scored,
+            depth=int(depth_reached) if depth_reached else None,
+            nodes=int(budget.certify_nodes),
+        )
         record["profile"] = getattr(self.profile, "name", None)
         record["lambda"] = float(knob(self.cfg, "steer", "lambda_weakness", 0.15))
         timings["total"] = _ms(t_start)
@@ -297,14 +303,33 @@ class SteeringPlayer:
         return next(iter(board.legal_moves))
 
 
-def _candidate_rows(certified: Certified | None, scored: list[Scored]) -> list[dict[str, Any]]:
-    """JSON-safe telemetry rows, one per certified candidate (rank order)."""
+def _candidate_rows(
+    certified: Certified | None,
+    scored: list[Scored],
+    *,
+    depth: int | None = None,
+    nodes: int | None = None,
+) -> list[dict[str, Any]]:
+    """JSON-safe telemetry rows, one per certified candidate (rank order).
+
+    `pv`, `depth` and `nodes` let uci.py print a standard `info` line (fastchess/lichess-bot
+    record them in the PGN); they describe the certify search the candidates came from.
+    """
     if certified is None:
         return []
     by_move = {s.candidate.move: s for s in scored}
     rows: list[dict[str, Any]] = []
     for cand in certified.candidates:
-        row: dict[str, Any] = {"move": cand.move.uci(), "cp": cand.cp, "rank": cand.rank}
+        row: dict[str, Any] = {
+            "move": cand.move.uci(),
+            "cp": cand.cp,
+            "rank": cand.rank,
+            "pv": [m.uci() for m in (cand.pv or [cand.move])],
+        }
+        if depth:
+            row["depth"] = int(depth)
+        if nodes:
+            row["nodes"] = int(nodes)
         s = by_move.get(cand.move)
         if s is not None:
             row["evaluated"] = s.evaluated
