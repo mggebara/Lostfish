@@ -187,3 +187,9 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
 - Open lever before giving up: a stricter deviation policy (small tolerance, large min_gain) — only the few
   lines with a big predicted edge. Measurable offline from this run's telemetry (realised vs predicted gain
   by predicted-edge bin). Final high-budget test running overnight: `experiments/field_v2_600k`.
+- Offline analysis of that run (telemetry × PGN, 3,382 predictions): the Lc0 policy proxy predicts the real
+  lc0@200 reply **69.7%** top-1 (vs 50–60% for the Stockfish depth proxy). Realised change in our next
+  certified eval, non-deviated moves: +6.2 cp (baseline drift). Deviated moves by predicted edge: edge < 20 →
+  +3.3 / −4.0 (line1/line2), 20–50 → +2.7 / +3.4, **≥ 50 → +21.7 / +7.4**. Only big-edge deviations beat the
+  baseline; small-edge ones lose. Queued `experiments/lc0_v2g50_t1_n200` with `min_gain_cp: 50`
+  (variants `v2_line1_g50`, `v2_line2_g50`) to run after the 600k field test.
