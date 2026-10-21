@@ -1,3 +1,4 @@
+# Within-run control LostFish-tol0 (same MultiPV certify search, no steering) isolates the MultiPV cost.
 # Line-search test vs a competitive, differently-shaped engine: lc0 + T1-256x10 at 200 nodes (calibration:
 # ~50-60% for Stockfish@20k). Seeds LostFish-line1, LostFish-line2 (victim-play 2 deep, min_gain 10) and
 # Stockfish, all at 20k nodes. Profile lc0-t1 = the same net's root policy as the opponent model.
@@ -12,10 +13,21 @@ srand = 20261019
 ratinginterval = 20
 tb = "tb/syzygy"
 tbpieces = 5
-extra_args = ["-tournament", "gauntlet", "-seeds", "3"]
+extra_args = ["-tournament", "gauntlet", "-seeds", "4"]
 
 [each]
 # nodes per engine
+
+[[engine]]
+name = "LostFish-tol0"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/tol0.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
 
 [[engine]]
 name = "LostFish-line1"
