@@ -73,7 +73,9 @@ def analyse(exp: Path, tele: dict[tuple[str, str], dict]) -> None:
                             if chosen is not None and chosen["move"] != best["move"]:
                                 stats["deviated"] += 1
                                 cp_given.append(best["cp"] - chosen["cp"])
-                                pred_edge.append(chosen.get("expected_eval", 0) - best.get("expected_eval", 0))
+                                pred_edge.append(
+                                    chosen.get("expected_eval", 0) - best.get("expected_eval", 0)
+                                )
                         if chosen is not None and chosen.get("replies") and i + 1 < len(moves):
                             actual = moves[i + 1].uci()
                             preds = sorted(chosen["replies"], key=lambda r: -r["weight"])
@@ -86,13 +88,23 @@ def analyse(exp: Path, tele: dict[tuple[str, str], dict]) -> None:
     n = stats["moves"] or 1
     rc = stats["reply_checked"] or 1
     print(f"\n== {exp.name} ==")
-    print(f"LostFish moves matched: {stats['moves']} (no telemetry: {stats['no_telemetry']}, chosen mismatch: {stats['chosen_mismatch']})")
-    print(f"steer decisions: {stats['steer_decisions']}  deviated from SF best: {stats['deviated']} ({100*stats['deviated']/n:.1f}% of moves)")
+    print(
+        f"LostFish moves matched: {stats['moves']} (no telemetry: {stats['no_telemetry']}, chosen mismatch: {stats['chosen_mismatch']})"
+    )
+    print(
+        f"steer decisions: {stats['steer_decisions']}  deviated from SF best: {stats['deviated']} ({100 * stats['deviated'] / n:.1f}% of moves)"
+    )
     if cp_given:
         cp_given.sort()
-        print(f"certified cp given up when deviating: mean {sum(cp_given)/len(cp_given):.1f}, median {cp_given[len(cp_given)//2]}, max {cp_given[-1]}")
-        print(f"predicted expected-eval edge of chosen over best: mean {sum(pred_edge)/len(pred_edge):+.1f} cp")
-    print(f"predicted reply accuracy: top-1 {100*stats['reply_top1']/rc:.1f}%  top-2 {100*stats['reply_top2']/rc:.1f}%  (n={stats['reply_checked']})")
+        print(
+            f"certified cp given up when deviating: mean {sum(cp_given) / len(cp_given):.1f}, median {cp_given[len(cp_given) // 2]}, max {cp_given[-1]}"
+        )
+        print(
+            f"predicted expected-eval edge of chosen over best: mean {sum(pred_edge) / len(pred_edge):+.1f} cp"
+        )
+    print(
+        f"predicted reply accuracy: top-1 {100 * stats['reply_top1'] / rc:.1f}%  top-2 {100 * stats['reply_top2'] / rc:.1f}%  (n={stats['reply_checked']})"
+    )
 
 
 def main() -> None:

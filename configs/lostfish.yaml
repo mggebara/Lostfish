@@ -9,6 +9,10 @@ engines:
   threads: 1
 
 certify:
+  mode: multipv              # multipv (v1) | single_pv_verify (v2: single-PV best + shallow proposals + per-candidate verification)
+  proposal_fraction: 0.2     # v2: nodes for the shallow MultiPV proposal search, as a fraction of certify_nodes
+  verify_fraction: 0.5       # v2: nodes for each alternative's verification search, as a fraction of certify_nodes
+  proposal_tolerance_cp: 60  # v2: shallow-score window for proposals to be worth verifying
   multipv: 5                 # K candidates
   tolerance_cp: 30           # candidates within this many cp of the best move
   tolerance_min_cp: 0

@@ -1,0 +1,75 @@
+# Certifier v2 + 1-ply exploit search, min_gain 10.
+# All tunables live here. Pin engine versions so results are reproducible.
+engines:
+  stockfish: engines/stockfish          # set by scripts/setup_engines.sh
+  stockfish_version: "19"              # sf_19 tag; also pinned in scripts/setup_engines.sh
+  fastchess: engines/fastchess
+  fastchess_version: "1.8.2-alpha"
+  syzygy_path: tb/syzygy
+  hash_mb: 64
+  threads: 1
+
+certify:
+  mode: single_pv_verify              # multipv (v1) | single_pv_verify (v2: single-PV best + shallow proposals + per-candidate verification)
+  proposal_fraction: 0.2     # v2: nodes for the shallow MultiPV proposal search, as a fraction of certify_nodes
+  verify_fraction: 0.5       # v2: nodes for each alternative's verification search, as a fraction of certify_nodes
+  proposal_tolerance_cp: 60  # v2: shallow-score window for proposals to be worth verifying
+  multipv: 5                 # K candidates
+  tolerance_cp: 30           # candidates within this many cp of the best move
+  tolerance_min_cp: 0
+  tighten_when_behind_cp: 150
+  # tolerance policy (lostfish/certify.py::tolerance_policy, docs/STEERING.md)
+  volatility_depths: 4       # deepest N depths of the rank-1 eval used to measure volatility
+  volatility_half_cp: 100    # eval spread (max - min) over those depths that halves tolerance
+  low_clock_fraction: 0.15   # below this clock fraction tolerance shrinks linearly to 50 %
+  expand_when_ahead_cp: 150  # above this eval tolerance grows ...
+  expand_when_ahead: 0.5     # ... by up to +50 %, reached at 2 x expand_when_ahead_cp
+
+steer:
+  lambda_weakness: 0.15      # weight of profile weakness-match relative to expected eval
+  proxy_depth_cap: 12
+  replies: 2                 # top-N predicted opponent replies evaluated per candidate
+  reply_temperature_cp: 100  # softmax temperature over the proxy's MultiPV scores
+  min_reply_weight: 0.02     # replies below this weight are not evaluated (rest renormalised)
+  line_depth: 1              # opponent replies per exploit line; >1 = victim-play rollout (our best + predicted reply)
+  line_nodes: null           # nodes for our intermediate moves in a line (default eval_nodes/2)
+  decisive_cp: 600           # stop a line early once our search sees |eval| >= this
+  min_gain_cp: 10             # deviate from Stockfish's best only if the steer score beats it by this much
+  lc0_path: lc0              # Lc0 binary for lc0_policy (Maia) opponent proxies; weights come from the profile
+  weakness_radius: 1.5       # cluster match radius, x sqrt(n_features), standardised units
+  max_weakness: 2.0          # clamp on (uplift - 1); bonus <= lambda * 100 * max_weakness cp
+  proxy_hash_mb: 16          # Hash of the dedicated opponent-proxy engine
+
+budgets:                     # nodes per move by time control class
+  bullet:   { certify_nodes: 200000,  eval_nodes: 50000,  k: 3, proxy_depth_cap: 8 }
+  blitz:    { certify_nodes: 600000,  eval_nodes: 150000, k: 5, proxy_depth_cap: 12 }
+  rapid:    { certify_nodes: 1500000, eval_nodes: 400000, k: 6, proxy_depth_cap: 14 }
+
+timeman:
+  moves_to_go_assumed: 30
+  increment_fraction: 0.8
+  min_move_ms: 50
+  reserve_ms: 300
+  nps_estimate: 700000      # Stockfish nodes/s at Threads=1 (M1 Pro ~1.1M); converts ms -> nodes
+
+profiles:
+  dir: profiles
+  fallback: _generic
+
+mining:                      # offline pipeline (mining/*.py); CLI flags override these
+  stockfish: engines/stockfish
+  hash_mb: 16                # per annotation worker; Threads=1 always
+  nodes: 20000               # go nodes N per annotated position
+  workers: 4
+  min_ply: 20                # annotate bot moves from ply 20 (after move 10)
+  max_games: 300             # games stored per bot
+  min_games: 50              # skip bots with fewer games
+  perf: bullet,blitz
+  since_days: 365
+  k: 8                       # k-means clusters per bot
+  blunder_cp: 100            # blunder = clipped loss >= this
+  clip_cp: 1000              # evals clipped to ±clip_cp before computing loss
+  min_cluster: 30            # clusters smaller than this are not kept in profiles
+  test_fraction: 0.2         # held-out games for the fingerprint gate
+  min_coverage: 0.5          # depths completed in < this share of positions are not selectable
+  opening_plies: 8           # repertoire prefix length (plies)

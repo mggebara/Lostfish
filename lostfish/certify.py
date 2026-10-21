@@ -20,6 +20,13 @@ if TYPE_CHECKING:
     from lostfish.timeman import Budget
 
 MATE_CP = 32000  # mirrors lostfish.engines.MATE_CP (docs/INTERFACES.md)
+
+
+def is_mate_cp(cp: int) -> bool:
+    """True for mate-distance scores (|cp| >= 31000), mirroring lostfish.engines.is_mate_cp."""
+    return abs(int(cp)) >= 31000
+
+
 MATE_THRESHOLD = MATE_CP - 1000  # |cp| at or above this is a mate score
 _VOL_CLAMP_CP = 1000  # depth evals are clamped to ±this before measuring volatility
 _MISSING = object()
@@ -190,10 +197,18 @@ def certify(lines: list[PVLine], tolerance_cp: int) -> Certified:
 def certify_position(
     engine: Engine, board: chess.Board, pov: chess.Color, budget: Budget, cfg: Config
 ) -> Certified:
-    """One MultiPV search → tolerance_policy → certify.
+    """Certify candidates for `board`. Dispatches on `certify.mode`:
 
+    - "multipv" (v1): one MultiPV=k search at budget.certify_nodes → tolerance_policy → certify.
+      Simple, but MultiPV weakens the rank-1 move (−2 points at 600k nodes, −24 at 20k vs Stockfish).
+    - "single_pv_verify" (v2): `certify_position_v2` — the best move comes from a single-PV search at
+      full nodes (identical to plain Stockfish), alternatives are proposed by a shallow MultiPV search and
+      each is verified by its own search before it may become a candidate.
     Node-limited (budget.certify_nodes) unless the budget carries a depth (`go depth D`).
     """
+    mode = str(knob(cfg, "certify", "mode", "multipv"))
+    if mode == "single_pv_verify":
+        return certify_position_v2(engine, board, pov, budget, cfg)
     depth = getattr(budget, "depth", None)
     limit = {"depth": int(depth)} if depth else {"nodes": int(budget.certify_nodes)}
     lines = engine.analyse(board, multipv=max(1, int(budget.k)), pov=pov, trajectory=True, **limit)
@@ -207,3 +222,75 @@ def certify_position(
         cfg,
     )
     return certify(lines, tol)
+
+
+def _child_eval(
+    engine: Engine, after: chess.Board, pov: chess.Color, nodes: int
+) -> tuple[int, list[chess.Move]]:
+    """Eval (pov) of a position after our candidate, with the opponent to move."""
+    if after.is_checkmate():
+        return MATE_CP, []
+    if after.is_stalemate() or after.is_insufficient_material():
+        return 0, []
+    lines = engine.analyse(after, nodes=max(1, int(nodes)), multipv=1, pov=pov)
+    if not lines:
+        raise ValueError(f"verifier returned no lines for {after.fen()}")
+    return int(lines[0].cp), list(lines[0].pv)
+
+
+def certify_position_v2(
+    engine: Engine, board: chess.Board, pov: chess.Color, budget: Budget, cfg: Config
+) -> Certified:
+    """Certifier without the MultiPV tax (see DECISIONS 2026-10-20).
+
+    1. Single-PV search at the full node budget → `best` (exactly the move/eval plain Stockfish plays).
+    2. Tolerance from `tolerance_policy`; if it is 0 the answer is `best` alone (no extra searches).
+    3. Proposals: a shallow MultiPV=k search at `proposal_fraction` of the nodes; alternatives whose
+       shallow score is within `proposal_tolerance_cp` of the shallow best are kept (at most `max_verify`).
+    4. Verification: each alternative is played and the child searched single-PV at `verify_fraction` of
+       the nodes; it is certified iff its eval >= best.cp − tolerance. Candidates are sorted by that eval.
+    Cost ≈ (1 + proposal_fraction + verify_fraction × n_alternatives) × certify_nodes.
+    """
+    depth = getattr(budget, "depth", None)
+    nodes = int(budget.certify_nodes)
+    limit = {"depth": int(depth)} if depth else {"nodes": nodes}
+    lines = engine.analyse(board, multipv=1, pov=pov, trajectory=True, **limit)
+    if not lines:
+        raise ValueError(f"certifier returned no lines for {board.fen()}")
+    top = lines[0]
+    traj = dict(getattr(top, "eval_by_depth", None) or {})
+    best = Candidate(top.move, int(top.cp), 1, list(top.pv))
+    tol = tolerance_policy(best.cp, traj, float(getattr(budget, "clock_fraction", 1.0)), cfg)
+    k = max(1, int(budget.k))
+    if tol <= 0 or k <= 1 or is_mate_cp(best.cp):
+        return Certified(best, [best], tol, traj)
+    prop_frac = float(knob(cfg, "certify", "proposal_fraction", 0.2))
+    verify_frac = float(knob(cfg, "certify", "verify_fraction", 0.5))
+    prop_tol = int(knob(cfg, "certify", "proposal_tolerance_cp", 60))
+    max_verify = int(knob(cfg, "certify", "max_verify", k - 1))
+    prop_nodes = max(1000, int(nodes * prop_frac))
+    proposals = engine.analyse(board, nodes=prop_nodes, multipv=k, pov=pov)
+    if not proposals:
+        return Certified(best, [best], tol, traj)
+    shallow_best = max(int(ln.cp) for ln in proposals)
+    alts = [
+        ln
+        for ln in sorted(proposals, key=lambda ln: ln.rank)
+        if ln.move != best.move and int(ln.cp) >= shallow_best - prop_tol
+    ][: max(0, max_verify)]
+    verified: list[Candidate] = []
+    verify_nodes = max(1000, int(nodes * verify_frac))
+    for ln in alts:
+        if not board.is_legal(ln.move):
+            continue
+        after = board.copy(stack=False)
+        after.push(ln.move)
+        cp, pv_after = _child_eval(engine, after, pov, verify_nodes)
+        if cp >= best.cp - tol:
+            verified.append(Candidate(ln.move, cp, 0, [ln.move, *pv_after]))
+    verified.sort(key=lambda c: -c.cp)
+    cands = [best]
+    for i, c in enumerate(verified):
+        c.rank = i + 2
+        cands.append(c)
+    return Certified(best, cands, tol, traj)
