@@ -215,3 +215,21 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
      proposer/value net (PyTorch on MPS) that predicts "victim blunders within n plies" and proposes
      trap-setting candidates, replacing Stockfish MultiPV as the candidate source.
 - Lichess bot stays on steering=true for data; Lichess is not the measurement for this phase.
+
+## 2026-10-21 — Steering thesis closed as negative at 20k–600k nodes; project pivots to the Lc0 victim
+
+- `experiments/field_v2_600k`, stopped at 1,325/1,440 games for a machine shutdown (sample already ±4.7):
+  vs the Stockfish field, 264 games per seed: **Stockfish 78.6%, v2 control 75.9%, v2 + 2-ply 74.1%,
+  v2 + 1-ply 72.9%**. Head-to-head every seed vs every other: exactly 50.0% — the v2 control is
+  Stockfish-equivalent by construction; its 2.7-point gap vs the field is within noise. Steering: −1.8 /
+  −3.0 vs the control. Per opponent, steering lost most vs the depth-limited engines (d10, d12).
+- Across all controlled runs (two budgets, Stockfish- and Lc0-shaped opponents, depth proxy, exact-depth
+  oracle, Maia/Lc0 policy proxy at 70% accuracy, 1-ply and 2-ply victim-play lines, MultiPV and
+  single-PV certifiers): steering's marginal effect is 0 to −9 points, never positive. **Conclusion:**
+  certify-then-steer within a 30 cp tolerance does not beat plain Stockfish against engine opponents at
+  these budgets. The exploitable slack is smaller than the cost of leaving Stockfish's best move.
+- Not run (machine shutdown): `lc0_v2g50_t1_n200` (strict min_gain 50) and `lc0_victim_t1_n50` (first
+  exploitability point with the exact victim model + victim-play tree). Resume queue, in order:
+  `nohup scripts/run_queue.sh experiments/lc0_v2g50_t1_n200 experiments/lc0_victim_t1_n50 > logs/queue.log 2>&1 &`
+- Lichess (steering on, 2026-10-20 21:16 → 2026-10-21 08:10): 68 games, 35W 30D 3L; rated top band 6W 29D 3L,
+  casual 1500–2500 band 29W 1D 0L. Bot stopped cleanly between games for the shutdown.
