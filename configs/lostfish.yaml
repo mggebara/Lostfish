@@ -26,6 +26,7 @@ steer:
   replies: 2                 # top-N predicted opponent replies evaluated per candidate
   reply_temperature_cp: 100  # softmax temperature over the proxy's MultiPV scores
   min_reply_weight: 0.02     # replies below this weight are not evaluated (rest renormalised)
+  lc0_path: lc0              # Lc0 binary for lc0_policy (Maia) opponent proxies; weights come from the profile
   weakness_radius: 1.5       # cluster match radius, x sqrt(n_features), standardised units
   max_weakness: 2.0          # clamp on (uplift - 1); bonus <= lambda * 100 * max_weakness cp
   proxy_hash_mb: 16          # Hash of the dedicated opponent-proxy engine

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 import chess
 
 from lostfish.certify import Certified, certify_position, knob
-from lostfish.opponent import DEFAULT_TEMPERATURE_CP, StockfishDepthProxy
+from lostfish.opponent import DEFAULT_TEMPERATURE_CP, Lc0PolicyProxy, StockfishDepthProxy
 from lostfish.steer import ExtractFn, Scored, pick_detailed
 
 if TYPE_CHECKING:
@@ -111,6 +111,7 @@ class SteeringPlayer:
         self.opponent_rating: int | None = None
         self.profile: Profile | FallbackProfile | None = None
         self._stop = threading.Event()
+        self._lc0_proxy: Lc0PolicyProxy | None = None
 
     def _spawn(
         self,
@@ -148,6 +149,9 @@ class SteeringPlayer:
                     log.exception("stopping %s failed", getattr(eng, "name", eng))
 
     def close(self) -> None:
+        if self._lc0_proxy is not None:
+            self._lc0_proxy.close()
+            self._lc0_proxy = None
         engines, self._engines = self._engines, []
         for eng in engines:
             try:
@@ -212,7 +216,7 @@ class SteeringPlayer:
         timings: dict[str, float],
     ) -> tuple[chess.Move, list[Scored]]:
         temperature = float(knob(self.cfg, "steer", "reply_temperature_cp", DEFAULT_TEMPERATURE_CP))
-        proxy = StockfishDepthProxy(self.proxy_engine, depth, temperature_cp=temperature)
+        proxy = self._make_proxy(depth, temperature, record)
         t = time.perf_counter()
         result = pick_detailed(
             board,
@@ -232,6 +236,33 @@ class SteeringPlayer:
         if result.error:
             record["error"] = result.error
         return result.move, result.scored
+
+    def _make_proxy(
+        self, depth: int, temperature: float, record: dict[str, Any]
+    ) -> StockfishDepthProxy | Lc0PolicyProxy:
+        """Opponent model for the current profile.
+
+        `profile.proxy == "lc0_policy"` (Maia-like bots) uses a persistent Lc0 process with the
+        network named in `profile.notes["lc0_weights"]` (path relative to the repo root); anything
+        else, or any failure to start Lc0, falls back to Stockfish at the fingerprinted depth.
+        """
+        kind = str(getattr(self.profile, "proxy", "stockfish_depth") or "stockfish_depth")
+        notes = getattr(self.profile, "notes", None) or {}
+        weights = str(notes.get("lc0_weights") or "") if isinstance(notes, dict) else ""
+        if kind == "lc0_policy" and weights:
+            try:
+                if self._lc0_proxy is None or self._lc0_proxy.weights != weights:
+                    if self._lc0_proxy is not None:
+                        self._lc0_proxy.close()
+                        self._lc0_proxy = None
+                    lc0_path = str(knob(self.cfg, "steer", "lc0_path", "lc0"))
+                    self._lc0_proxy = Lc0PolicyProxy(lc0_path, weights, threads=1)
+                record["proxy"] = f"lc0_policy:{weights.rsplit('/', 1)[-1]}"
+                return self._lc0_proxy
+            except Exception:
+                log.exception("lc0 policy proxy unavailable (%s); using the depth proxy", weights)
+        record["proxy"] = f"stockfish_depth:{depth}"
+        return StockfishDepthProxy(self.proxy_engine, depth, temperature_cp=temperature)
 
     def _load_profile(self, name: str | None) -> Profile | FallbackProfile:
         try:
