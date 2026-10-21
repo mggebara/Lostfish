@@ -1,5 +1,5 @@
-# Variant: tolerance 0 + min_gain 100000 -> always plays rank-1 of the MultiPV=K certify search (ties included). Isolates the cost of
-# searching with MultiPV=5 vs Stockfish's single-PV search at equal nodes (no steering happens).
+# Control variant: tolerance 0, lambda 0, min_gain 100000 -> always plays rank-1 of the MultiPV=K certify
+# search (ties included). Measures the MultiPV certifier cost with no steering at all.
 # All tunables live here. Pin engine versions so results are reproducible.
 engines:
   stockfish: engines/stockfish          # set by scripts/setup_engines.sh
@@ -28,6 +28,11 @@ steer:
   replies: 2                 # top-N predicted opponent replies evaluated per candidate
   reply_temperature_cp: 100  # softmax temperature over the proxy's MultiPV scores
   min_reply_weight: 0.02     # replies below this weight are not evaluated (rest renormalised)
+  line_depth: 1              # opponent replies per exploit line; >1 = victim-play rollout (our best + predicted reply)
+  line_nodes: null           # nodes for our intermediate moves in a line (default eval_nodes/2)
+  decisive_cp: 600           # stop a line early once our search sees |eval| >= this
+  min_gain_cp: 100000             # deviate from Stockfish's best only if the steer score beats it by this much
+  lc0_path: lc0              # Lc0 binary for lc0_policy (Maia) opponent proxies; weights come from the profile
   weakness_radius: 1.5       # cluster match radius, x sqrt(n_features), standardised units
   max_weakness: 2.0          # clamp on (uplift - 1); bonus <= lambda * 100 * max_weakness cp
   proxy_hash_mb: 16          # Hash of the dedicated opponent-proxy engine
