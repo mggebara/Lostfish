@@ -155,3 +155,21 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   compute; steering's marginal value is small-positive at best. The next structural change must remove the
   MultiPV tax (single-PV certify for the best move/eval; cheap candidate proposals verified inside the
   exploit lines) before any steering gain can show up in match results.
+
+## 2026-10-20 (late) — Line-search rerun and Maia runs: steering is a small plus, the MultiPV certifier dominates
+
+- `lc0_line_t1_n200_v2` (deadline fixed, 640 games, 0 problems), vs lc0 T1@200, 64 games each:
+  Stockfish 78.1%, line2 60.9%, line1 57.0%, tol0 control 56.2%. Pooled with v1 (128 games each):
+  control 54.3%, line1 57.4% (+3.1), line2 60.2% (+5.9), Stockfish 78.1% (+23.8 over the control).
+  2-ply ≥ 1-ply ≥ control in both runs; the margins are inside ±7 but consistent in sign.
+- `maia_line_1900_n400`: ceiling as predicted (all seeds 97.7–100%). Mean plies to win vs Maia:
+  Stockfish 96.6, line1 96.9, line2 102.0, control 106.8 → steering wins ~5–10 plies faster than its own
+  certifier, but not faster than plain Stockfish. `maia_oracle_{1900,1500}_n1`: 100% for both seeds (no
+  information beyond "no harm"); head-to-head Stockfish beats LostFish@20k ~74%.
+- Decision: the measured marginal value of the exploit search is small-positive (+3 to +6 points vs its own
+  certifier at 20k; ~+0 at 600k) and the MultiPV certifier tax (−24 at 20k, −2 at 600k) swamps it. Next
+  structural change, as announced: **certifier v2 without MultiPV** — single-PV search at full nodes for the
+  best move/eval (identical to plain Stockfish), a shallow MultiPV for candidate proposals, and a per-candidate
+  verification search before certification. The control then equals Stockfish by construction.
+- Lichess (steering, since 21:16): 1W 3D 1L; first rated loss (vs CruelKen 3036). Casual mid-band game vs
+  RomanticBot2 (2312): win.
