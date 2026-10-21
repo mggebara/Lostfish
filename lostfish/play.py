@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 import chess
 
 from lostfish.certify import Certified, certify_position, knob
-from lostfish.opponent import DEFAULT_TEMPERATURE_CP, StockfishDepthProxy
+from lostfish.opponent import DEFAULT_TEMPERATURE_CP, Lc0PolicyProxy, StockfishDepthProxy
 from lostfish.steer import ExtractFn, Scored, pick_detailed
 
 if TYPE_CHECKING:
@@ -111,6 +111,7 @@ class SteeringPlayer:
         self.opponent_rating: int | None = None
         self.profile: Profile | FallbackProfile | None = None
         self._stop = threading.Event()
+        self._lc0_proxy: Lc0PolicyProxy | None = None
 
     def _spawn(
         self,
@@ -148,6 +149,9 @@ class SteeringPlayer:
                     log.exception("stopping %s failed", getattr(eng, "name", eng))
 
     def close(self) -> None:
+        if self._lc0_proxy is not None:
+            self._lc0_proxy.close()
+            self._lc0_proxy = None
         engines, self._engines = self._engines, []
         for eng in engines:
             try:
@@ -192,7 +196,13 @@ class SteeringPlayer:
             record["error"] = f"chosen move {move} is illegal; " + record.get("error", "")
             move = self._emergency_move(board, budget, None)
         record["chosen"] = move.uci()
-        record["candidates"] = _candidate_rows(certified, scored)
+        depth_reached = max(certified.eval_by_depth, default=None) if certified else None
+        record["candidates"] = _candidate_rows(
+            certified,
+            scored,
+            depth=int(depth_reached) if depth_reached else None,
+            nodes=int(budget.certify_nodes),
+        )
         record["profile"] = getattr(self.profile, "name", None)
         record["lambda"] = float(knob(self.cfg, "steer", "lambda_weakness", 0.15))
         timings["total"] = _ms(t_start)
@@ -212,7 +222,7 @@ class SteeringPlayer:
         timings: dict[str, float],
     ) -> tuple[chess.Move, list[Scored]]:
         temperature = float(knob(self.cfg, "steer", "reply_temperature_cp", DEFAULT_TEMPERATURE_CP))
-        proxy = StockfishDepthProxy(self.proxy_engine, depth, temperature_cp=temperature)
+        proxy = self._make_proxy(depth, temperature, record)
         t = time.perf_counter()
         result = pick_detailed(
             board,
@@ -232,6 +242,33 @@ class SteeringPlayer:
         if result.error:
             record["error"] = result.error
         return result.move, result.scored
+
+    def _make_proxy(
+        self, depth: int, temperature: float, record: dict[str, Any]
+    ) -> StockfishDepthProxy | Lc0PolicyProxy:
+        """Opponent model for the current profile.
+
+        `profile.proxy == "lc0_policy"` (Maia-like bots) uses a persistent Lc0 process with the
+        network named in `profile.notes["lc0_weights"]` (path relative to the repo root); anything
+        else, or any failure to start Lc0, falls back to Stockfish at the fingerprinted depth.
+        """
+        kind = str(getattr(self.profile, "proxy", "stockfish_depth") or "stockfish_depth")
+        notes = getattr(self.profile, "notes", None) or {}
+        weights = str(notes.get("lc0_weights") or "") if isinstance(notes, dict) else ""
+        if kind == "lc0_policy" and weights:
+            try:
+                if self._lc0_proxy is None or self._lc0_proxy.weights != weights:
+                    if self._lc0_proxy is not None:
+                        self._lc0_proxy.close()
+                        self._lc0_proxy = None
+                    lc0_path = str(knob(self.cfg, "steer", "lc0_path", "lc0"))
+                    self._lc0_proxy = Lc0PolicyProxy(lc0_path, weights, threads=1)
+                record["proxy"] = f"lc0_policy:{weights.rsplit('/', 1)[-1]}"
+                return self._lc0_proxy
+            except Exception:
+                log.exception("lc0 policy proxy unavailable (%s); using the depth proxy", weights)
+        record["proxy"] = f"stockfish_depth:{depth}"
+        return StockfishDepthProxy(self.proxy_engine, depth, temperature_cp=temperature)
 
     def _load_profile(self, name: str | None) -> Profile | FallbackProfile:
         try:
@@ -266,14 +303,33 @@ class SteeringPlayer:
         return next(iter(board.legal_moves))
 
 
-def _candidate_rows(certified: Certified | None, scored: list[Scored]) -> list[dict[str, Any]]:
-    """JSON-safe telemetry rows, one per certified candidate (rank order)."""
+def _candidate_rows(
+    certified: Certified | None,
+    scored: list[Scored],
+    *,
+    depth: int | None = None,
+    nodes: int | None = None,
+) -> list[dict[str, Any]]:
+    """JSON-safe telemetry rows, one per certified candidate (rank order).
+
+    `pv`, `depth` and `nodes` let uci.py print a standard `info` line (fastchess/lichess-bot
+    record them in the PGN); they describe the certify search the candidates came from.
+    """
     if certified is None:
         return []
     by_move = {s.candidate.move: s for s in scored}
     rows: list[dict[str, Any]] = []
     for cand in certified.candidates:
-        row: dict[str, Any] = {"move": cand.move.uci(), "cp": cand.cp, "rank": cand.rank}
+        row: dict[str, Any] = {
+            "move": cand.move.uci(),
+            "cp": cand.cp,
+            "rank": cand.rank,
+            "pv": [m.uci() for m in (cand.pv or [cand.move])],
+        }
+        if depth:
+            row["depth"] = int(depth)
+        if nodes:
+            row["nodes"] = int(nodes)
         s = by_move.get(cand.move)
         if s is not None:
             row["evaluated"] = s.evaluated
@@ -283,5 +339,9 @@ def _candidate_rows(certified: Certified | None, scored: list[Scored]) -> list[d
             row["replies"] = [
                 {"move": r.uci(), "weight": round(w, 4), "eval": e} for r, w, e in s.replies
             ]
+            for j, (line, evs) in enumerate(zip(s.lines, s.line_evals, strict=False)):
+                if j < len(row["replies"]):
+                    row["replies"][j]["line"] = line
+                    row["replies"][j]["line_evals"] = evs
         rows.append(row)
     return rows

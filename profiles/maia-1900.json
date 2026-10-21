@@ -1,0 +1,18 @@
+{
+ "name": "maia-1900",
+ "version": 1,
+ "built_at": "2026-10-19",
+ "n_games": 0,
+ "n_positions": 0,
+ "rating": 1900,
+ "proxy": "lc0_policy",
+ "effective_depth": 8,
+ "depth_agreement": {},
+ "base_blunder_rate": 0.0,
+ "weak_clusters": [],
+ "openings": [],
+ "notes": {
+  "lc0_weights": "engines/maia/maia-1900.pb.gz",
+  "proxy_note": "Maia net root policy at 1 node (lc0 VerboseMoveStats)"
+ }
+}

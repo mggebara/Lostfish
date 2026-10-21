@@ -1,0 +1,45 @@
+# Maia oracle: the opponent is lc0 + maia-1500 at 1 node(s); LostFish's proxy uses the same net (profile
+# maia-1500), so at 1 node the reply prediction is exact. Seeds at 100000 nodes (bullet-class budgets) to leave
+# some headroom below the ceiling. Stockfish is the matched baseline. 32 rounds x 2 games per seed.
+rounds = 32
+games = 2
+concurrency = 4
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261019
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+extra_args = ["-tournament", "gauntlet", "-seeds", "2"]
+
+[each]
+# nodes are per engine (a shared [each] nodes overrides per-engine limits)
+
+[[engine]]
+name = "LostFish-maia1500"
+cmd = "scripts/lostfish"
+nodes = 100000
+[engine.options]
+Steering = true
+Profile = "maia-1500"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+nodes = 100000
+[engine.options]
+Threads = 1
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "maia-1500-n1"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 1
+[engine.options]
+WeightsFile = "{root}/engines/maia/maia-1500.pb.gz"
+Threads = 1

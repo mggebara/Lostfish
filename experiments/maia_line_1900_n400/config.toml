@@ -1,0 +1,68 @@
+# Within-run control LostFish-tol0 (same MultiPV certify search, no steering) isolates the MultiPV cost.
+# Line-search test vs Maia: seeds LostFish-line1 (1 reply deep), LostFish-line2 (victim-play, 2 replies deep,
+# min_gain 10cp) and Stockfish, all at 20000 nodes (handicapped so the Maia opponent is competitive), vs
+# lc0+maia-1900 at 400 nodes. Profile maia-1900 = Maia policy proxy. Same openings for every seed.
+rounds = 32
+games = 2
+concurrency = 4
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261019
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+extra_args = ["-tournament", "gauntlet", "-seeds", "4"]
+
+[each]
+# nodes per engine
+
+[[engine]]
+name = "LostFish-tol0"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/tol0.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "maia-1900"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "LostFish-line1"
+cmd = "scripts/lostfish"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "maia-1900"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "LostFish-line2"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/line2.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "maia-1900"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+nodes = 20000
+[engine.options]
+Threads = 1
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "maia-1900-n400"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 400
+[engine.options]
+WeightsFile = "{root}/engines/maia/maia-1900.pb.gz"
+Threads = 1

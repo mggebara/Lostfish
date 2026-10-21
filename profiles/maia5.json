@@ -5,8 +5,8 @@
  "n_games": 294,
  "n_positions": 7809,
  "rating": 1467,
- "proxy": "stockfish_depth",
- "effective_depth": 13,
+ "proxy": "lc0_policy",
+ "effective_depth": 8,
  "depth_agreement": {
   "1": 0.40966,
   "2": 0.39851,
@@ -1109,6 +1109,8 @@
    "n_games": 300,
    "vs_bot_fraction": 0.23,
    "mean_plies": 72.1
-  }
+  },
+  "lc0_weights": "engines/maia/maia-1500.pb.gz",
+  "proxy_note": "Maia net root policy at 1 node (lc0 VerboseMoveStats)"
  }
 }
