@@ -314,5 +314,9 @@ def _candidate_rows(certified: Certified | None, scored: list[Scored]) -> list[d
             row["replies"] = [
                 {"move": r.uci(), "weight": round(w, 4), "eval": e} for r, w, e in s.replies
             ]
+            for j, (line, evs) in enumerate(zip(s.lines, s.line_evals, strict=False)):
+                if j < len(row["replies"]):
+                    row["replies"][j]["line"] = line
+                    row["replies"][j]["line_evals"] = evs
         rows.append(row)
     return rows
