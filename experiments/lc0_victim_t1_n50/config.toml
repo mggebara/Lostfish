@@ -1,0 +1,67 @@
+# Exploitability point N_v=50: victim lc0 T1 @50 nodes. Seeds at 20k nodes: Stockfish, v2 control, v2 + 2-ply
+# line search with the 1-node policy proxy (min_gain 50), v2 + victim-play TREE (2 deep, width 2) with the
+# EXACT victim model (lc0 @50, profile lc0-t1-n50). 16 rounds x 2 = 32 games per pairing.
+rounds = 16
+games = 2
+concurrency = 4
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261019
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+extra_args = ["-tournament", "gauntlet", "-seeds", "4"]
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-tol0"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_tol0.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "LostFish-v2-line2-g50"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_line2_g50.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "LostFish-v2-tree2-exact"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_tree2_g50.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1-n50"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+nodes = 20000
+[engine.options]
+Threads = 1
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n50"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 50
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1
