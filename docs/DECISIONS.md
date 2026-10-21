@@ -137,3 +137,21 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   seeds LostFish-tol0 / line1 / line2 / Stockfish at 20k nodes, same openings.
 - Lichess ops lesson: three restarts in one day put the event stream into a 429 loop for 2.5 h (7.5k retries,
   0 games). Rule: restart at most once, then leave it; if rate-limited, stop for 10 min before starting again.
+
+## 2026-10-20 — Line search vs Lc0 near-peer at 20k nodes: steering helps a little, the certifier costs a lot
+
+- `experiments/lc0_line_t1_n200` (640 games, 0 problems): seeds at 20k nodes vs lc0 T1-256x10 @200 nodes,
+  64 games each: **Stockfish 78.1%, LostFish-line2 59.4%, LostFish-line1 57.8%, LostFish-tol0 (control) 52.3%**
+  (±9.5 each). Seed-vs-seed: Stockfish beats every LostFish variant ~70%.
+- Two readings. (1) **Relative to the same certifier, steering is positive**: line1 +5.5, line2 +7.1 over the
+  tol0 control (not significant at n=64, but the first positive sign for the mechanism, and 2-ply ≥ 1-ply).
+  (2) **The MultiPV certifier is ruinous at low budgets**: the control scores 26 points below plain Stockfish
+  at equal nodes (MultiPV=3 at 20k nodes ≈ 7k nodes per line). At 600k the same cost was 2 points.
+- Compute actually used per move (telemetry): tol0 24k nodes, line1 30k, line2 55k vs Stockfish's 20k. So
+  LostFish is also behind at equal *total* compute. Caveat: with no clock the soft budget was 200 ms and
+  26% of line2 moves hit the deadline (candidates skipped); fixed (`NO_CLOCK_FLOOR_MS`), rerun queued as
+  `lc0_line_t1_n200_v2`. Telemetry now records `line_depth` and `config` per move.
+- Conclusion so far: the architecture "MultiPV certify, then steer" is dominated by plain search at equal
+  compute; steering's marginal value is small-positive at best. The next structural change must remove the
+  MultiPV tax (single-PV certify for the best move/eval; cheap candidate proposals verified inside the
+  exploit lines) before any steering gain can show up in match results.

@@ -14,7 +14,8 @@ Other `go` forms: `nodes N` -> certify_nodes = N exactly (equal-node gauntlets r
 `depth D` -> Budget.depth = D and certify_nodes estimated for that depth; `movetime T` ->
 soft = hard = T - reserve_ms; `infinite`/bare `go` -> the class budget with no clock limit.
 Without a clock (nodes/depth/infinite/bare go) soft_ms/hard_ms are deliberately generous
-(NO_CLOCK_SLACK x the nominal time of certify + k evals) so they never bind a node-limited move.
+(max(NO_CLOCK_SLACK x the nominal time of certify + k evals, NO_CLOCK_FLOOR_MS)) so they never bind a
+node-limited move; in the first line-search gauntlet a 200 ms soft budget cut 26% of 2-ply moves short.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ BULLET_MAX_S = 180  # lichess: estimated duration = base + 40 * increment
 BLITZ_MAX_S = 480
 _MAX_NODES = 2_000_000_000
 NO_CLOCK_SLACK = 3
+NO_CLOCK_FLOOR_MS = 30_000  # clockless moves never see a binding deadline (line search needs this)
 
 
 @dataclass
@@ -148,7 +150,7 @@ def _make(
     eval_nodes = max(1000, round(b.eval_nodes * ratio)) if b.eval_nodes > 0 else 0
     if soft is None:
         nominal = nodes_to_ms(certify_nodes + b.k * eval_nodes, cfg)
-        soft = NO_CLOCK_SLACK * nominal + cfg.timeman.min_move_ms
+        soft = max(NO_CLOCK_SLACK * nominal + cfg.timeman.min_move_ms, NO_CLOCK_FLOOR_MS)
         hard = 2 * soft
     return Budget(
         tc_class=tc,

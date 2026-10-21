@@ -11,6 +11,7 @@ import copy
 import dataclasses
 import logging
 import math
+import os
 import threading
 import time
 from collections.abc import Callable, MutableMapping
@@ -205,6 +206,8 @@ class SteeringPlayer:
         )
         record["profile"] = getattr(self.profile, "name", None)
         record["lambda"] = float(knob(self.cfg, "steer", "lambda_weakness", 0.15))
+        record["line_depth"] = int(knob(self.cfg, "steer", "line_depth", 1))
+        record["config"] = os.path.basename(os.environ.get("LOSTFISH_CONFIG", "lostfish.yaml"))
         timings["total"] = _ms(t_start)
         record["timings_ms"] = timings
         return move, record
