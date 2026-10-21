@@ -60,9 +60,14 @@ class _FakeEngine:
 
 def test_predict_reply_from_policy_filters_illegal_and_normalises() -> None:
     proxy = Lc0PolicyProxy.__new__(Lc0PolicyProxy)
-    proxy.weights, proxy.name = "fake", "fake"
+    proxy.weights, proxy.name, proxy.nodes = "fake", "fake", 1
     proxy.engine = _FakeEngine(SAMPLE)  # type: ignore[assignment]
-    proxy.last_eval_cp, proxy.last_policy = None, {}
+    proxy.last_eval_cp, proxy.last_policy, proxy.last_visits, proxy.last_bestmove = (
+        None,
+        {},
+        {},
+        None,
+    )
     board = chess.Board("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3")
     replies = proxy.predict_reply(board, top_n=2)
     assert [m.uci() for m, _ in replies] == ["f1c4", "f1b5"]
@@ -93,3 +98,60 @@ def test_real_maia_policy_proxy() -> None:
         assert proxy.last_eval_cp is not None
     finally:
         proxy.close()
+
+
+def test_parse_visits_and_victim_mode_prefers_bestmove() -> None:
+    lines = [
+        "   f1c4  (139 ) N:      120 (+ 0) (P: 21.89%) (WL:  0.1) (D: 0.1) (Q:  0.05) (U: 0.3) ",
+        "   f1b5  (140 ) N:       70 (+ 0) (P: 18.00%) (WL:  0.1) (D: 0.1) (Q:  0.04) (U: 0.3) ",
+        "   node  (  27) N:      200 (+ 0) (P:  0.00%) (WL:  0.02) (D: 0.040) (M:  0.0) (Q:  0.02) (V:  0.02)",
+    ]
+    visits: dict[str, int] = {}
+    policy, _q = parse_lc0_verbose_stats(lines, visits=visits)
+    assert visits == {"f1c4": 120, "f1b5": 70} and policy["f1c4"] == 0.2189
+
+    class _Eng:
+        def analysis(self, board, limit):
+            return _FakeAnalysis(lines)
+
+        def quit(self) -> None:
+            pass
+
+    proxy = Lc0PolicyProxy.__new__(Lc0PolicyProxy)
+    proxy.weights, proxy.name, proxy.nodes = "fake", "fake", 200
+    proxy.engine = _Eng()  # type: ignore[assignment]
+    proxy.last_eval_cp, proxy.last_policy, proxy.last_visits, proxy.last_bestmove = (
+        None,
+        {},
+        {},
+        None,
+    )
+    board = chess.Board("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3")
+    replies = proxy.predict_reply(board, top_n=2)
+    assert [m.uci() for m, _ in replies] == ["f1c4", "f1b5"]
+    assert replies[0][1] > replies[1][1] and sum(w for _, w in replies) == pytest.approx(1.0)
+
+
+@pytest.mark.slow
+def test_real_lc0_victim_mode_matches_engine_bestmove() -> None:
+    import shutil as _sh
+
+    net = Path("engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz")
+    if _sh.which("lc0") is None or not net.exists():
+        pytest.skip("lc0 or T1 net not available")
+    import chess.engine
+
+    proxy = Lc0PolicyProxy("lc0", str(net.resolve()), nodes=100)
+    victim = chess.engine.SimpleEngine.popen_uci("lc0", timeout=180)
+    victim.configure({"WeightsFile": str(net.resolve()), "Threads": 1})
+    try:
+        board = chess.Board("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3")
+        pred = proxy.predict_reply(board, top_n=2)[0][0]
+        actual = victim.play(board, chess.engine.Limit(nodes=100)).move
+        assert board.is_legal(pred)
+        assert pred == actual, (
+            f"proxy {pred} vs victim {actual}"
+        )  # same engine, same budget, fresh hash
+    finally:
+        proxy.close()
+        victim.quit()

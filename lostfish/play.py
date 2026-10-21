@@ -260,13 +260,17 @@ class SteeringPlayer:
         weights = str(notes.get("lc0_weights") or "") if isinstance(notes, dict) else ""
         if kind == "lc0_policy" and weights:
             try:
-                if self._lc0_proxy is None or self._lc0_proxy.weights != weights:
+                lc0_nodes = max(1, int(notes.get("lc0_nodes") or 1))
+                stale = self._lc0_proxy is not None and (
+                    self._lc0_proxy.weights != weights or self._lc0_proxy.nodes != lc0_nodes
+                )
+                if self._lc0_proxy is None or stale:
                     if self._lc0_proxy is not None:
                         self._lc0_proxy.close()
                         self._lc0_proxy = None
                     lc0_path = str(knob(self.cfg, "steer", "lc0_path", "lc0"))
-                    self._lc0_proxy = Lc0PolicyProxy(lc0_path, weights, threads=1)
-                record["proxy"] = f"lc0_policy:{weights.rsplit('/', 1)[-1]}"
+                    self._lc0_proxy = Lc0PolicyProxy(lc0_path, weights, threads=1, nodes=lc0_nodes)
+                record["proxy"] = f"lc0_policy:{weights.rsplit('/', 1)[-1]}@{lc0_nodes}"
                 return self._lc0_proxy
             except Exception:
                 log.exception("lc0 policy proxy unavailable (%s); using the depth proxy", weights)

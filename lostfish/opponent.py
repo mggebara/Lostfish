@@ -102,15 +102,20 @@ class UniformRandomOpponent:
 
 # `info string` line from Lc0 with VerboseMoveStats=true, e.g.
 #   "f1c4  (139 ) N:       0 (+ 0) (P: 21.89%) (WL:  -.-----) ... (Q:  0.02156) ..."
-_LC0_STAT_RE = re.compile(r"^\s*(?P<move>\S+)\s+\(\s*\d+\s*\)\s+N:.*?\(P:\s*(?P<p>[0-9.]+)%\)")
+_LC0_STAT_RE = re.compile(
+    r"^\s*(?P<move>\S+)\s+\(\s*\d+\s*\)\s+N:\s*(?P<n>\d+).*?\(P:\s*(?P<p>[0-9.]+)%\)"
+)
 _LC0_Q_RE = re.compile(r"\(Q:\s*(?P<q>-?[0-9.]+)\)")
 
 
-def parse_lc0_verbose_stats(lines: Sequence[str]) -> tuple[dict[str, float], float | None]:
+def parse_lc0_verbose_stats(
+    lines: Sequence[str], *, visits: dict[str, int] | None = None
+) -> tuple[dict[str, float], float | None]:
     """Root policy {uci: probability} and the root Q from Lc0 VerboseMoveStats info strings.
 
-    The per-move lines carry each child's prior P; the final "node" line carries the root's Q
-    (side-to-move POV, in [-1, 1]). Lines that do not match are ignored.
+    The per-move lines carry each child's prior P and visit count N; the final "node" line carries
+    the root's Q (side-to-move POV, in [-1, 1]). If `visits` is given it is filled with {uci: N}.
+    Lines that do not match are ignored.
     """
     policy: dict[str, float] = {}
     root_q: float | None = None
@@ -123,6 +128,8 @@ def parse_lc0_verbose_stats(lines: Sequence[str]) -> tuple[dict[str, float], flo
             root_q = float(q.group("q")) if q else None
         else:
             policy[m.group("move")] = float(m.group("p")) / 100.0
+            if visits is not None:
+                visits[m.group("move")] = int(m.group("n"))
     return policy, root_q
 
 
@@ -133,12 +140,13 @@ def lc0_q_to_cp(q: float) -> int:
 
 
 class Lc0PolicyProxy:
-    """Predicts replies from a Leela/Maia network's root policy (1 node, no search).
+    """Predicts replies with a Leela/Maia network: root policy at 1 node, or a real search.
 
-    This is the "human-like / net-based bot" opponent model: Maia nets are trained to predict
-    the move a player of a given rating would play, so the raw policy *is* the prediction.
-    One prediction costs ~1 ms on the Metal backend. `last_eval_cp` is the net's root value
-    converted to centipawns (side-to-move POV) so steer.py can use it as the shallow eval.
+    `nodes=1` (default) is the "human-like / net-based bot" model: Maia nets predict the move a
+    player of a given rating would play, so the raw policy *is* the prediction (~2 ms on Metal).
+    `nodes=N>1` is the **exact victim model** (DECISIONS 2026-10-21): the same engine searched to
+    the victim's own budget; the prediction is its bestmove, alternates weighted by root visit
+    counts. `last_eval_cp` is the root value in centipawns (side-to-move POV).
     """
 
     def __init__(
@@ -148,11 +156,13 @@ class Lc0PolicyProxy:
         *,
         threads: int = 1,
         backend: str | None = None,
+        nodes: int = 1,
         name: str = "lc0-proxy",
     ) -> None:
         import chess.engine
 
         self.weights = str(weights)
+        self.nodes = max(1, int(nodes))
         self.name = name
         self.engine = chess.engine.SimpleEngine.popen_uci(lc0_path, timeout=180)
         opts: dict[str, object] = {
@@ -165,22 +175,31 @@ class Lc0PolicyProxy:
         self.engine.configure(opts)
         self.last_eval_cp: int | None = None
         self.last_policy: dict[str, float] = {}
+        self.last_visits: dict[str, int] = {}
+        self.last_bestmove: chess.Move | None = None
 
     def root_policy(self, board: chess.Board) -> dict[str, float]:
+        """Search `self.nodes` nodes; fill last_policy/last_visits/last_bestmove; return the policy."""
         import chess.engine
 
         strings: list[str] = []
-        with self.engine.analysis(board, chess.engine.Limit(nodes=1)) as analysis:
+        visits: dict[str, int] = {}
+        best: chess.Move | None = None
+        with self.engine.analysis(board, chess.engine.Limit(nodes=self.nodes)) as analysis:
             for info in analysis:
                 s = info.get("string")
                 if s:
                     strings.append(str(s))
-        policy, root_q = parse_lc0_verbose_stats(strings)
+                pv = info.get("pv")
+                if pv:
+                    best = pv[0]
+        policy, root_q = parse_lc0_verbose_stats(strings, visits=visits)
         legal = {m.uci() for m in board.legal_moves}
-        policy = {m: p for m, p in policy.items() if m in legal}
-        self.last_policy = policy
+        self.last_policy = {m: p for m, p in policy.items() if m in legal}
+        self.last_visits = {m: n for m, n in visits.items() if m in legal}
+        self.last_bestmove = best if best is not None and board.is_legal(best) else None
         self.last_eval_cp = lc0_q_to_cp(root_q) if root_q is not None else None
-        return policy
+        return self.last_policy
 
     def predict_reply(
         self, board: chess.Board, *, top_n: int = 2
@@ -195,7 +214,14 @@ class Lc0PolicyProxy:
         if not policy:
             raise RuntimeError(f"lc0 returned no policy for {board.fen()}")
         n = max(1, min(int(top_n), len(policy)))
-        ranked = sorted(policy.items(), key=lambda kv: -kv[1])[:n]
+        if self.nodes > 1 and self.last_visits:
+            # Exact victim model: its bestmove first, then alternates by root visit share.
+            dist: dict[str, float] = {m: float(v) for m, v in self.last_visits.items()}
+            if self.last_bestmove is not None:
+                dist[self.last_bestmove.uci()] = max(dist.values(), default=0.0) + 1.0
+            ranked = sorted(dist.items(), key=lambda kv: -kv[1])[:n]
+        else:
+            ranked = sorted(policy.items(), key=lambda kv: -kv[1])[:n]
         total = sum(p for _, p in ranked) or 1.0
         return [(chess.Move.from_uci(m), p / total) for m, p in ranked]
 
