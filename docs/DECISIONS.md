@@ -116,3 +116,24 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
 - Open items: fix the fingerprint depth cap (re-annotate ~50 games/bot at 200k nodes), make `uci.py` emit an
   `info depth/nodes/score/pv` line before `bestmove` (PGNs currently show n=0 for LostFish), build a bot-like
   local field (Maia via Lc0, weak open-source engines), and Phase 3 training on the 549k annotated positions.
+
+## 2026-10-20 — Tolerance-0 run: the MultiPV certifier alone costs ~2 points; 1-ply steering costs ~2 more
+
+- `experiments/gauntlet_v1_tol0` (1,088 games, per-engine node limits fixed): LostFish with tolerance 0
+  (MultiPV=5 certify search, never deviates) 78.3% vs Stockfish 80.4% → **−2.1 (±4.7)**, ≈ −29 Elo.
+  Summary of the decomposition at 600k nodes vs the same field: tol0 −2.1, tol15 −3.6, tol30 (generic) −4.4,
+  oracle depth −5.1. So the equal-nodes protocol charges MultiPV about 2 points, and the 1-ply exploit search
+  is itself worth about −2 on top. **Decision:** 1-ply steering is retired as the main idea; every steering
+  experiment from now on carries a `LostFish-tol0` seed as the within-run control.
+- Next idea (Matthew agreed): **victim-play line search** — continue each exploit line with our best move and
+  the opponent model's predicted reply for `steer.line_depth` replies, Stockfish only at the leaf; deviate
+  only when the line score beats Stockfish's move by `steer.min_gain_cp`. Implemented (default depth 1 keeps
+  old behaviour); variants `configs/variants/line2.yaml`, `line3.yaml`.
+- Opponent models that are actually right: `Lc0PolicyProxy` reads a Leela/Maia net's root policy at 1 node
+  (~1 ms). Exact for a 1-node Maia opponent; profiles `maia-1100/1500/1900`, `maia1/5/9` (Lichess), `lc0-t1`.
+- Ceiling effect: vs Maia-1900 even at 400 nodes, all seeds at 20k nodes win ~100%; win rate cannot show
+  steering there (use `scripts/game_length.py`). Lc0 T1-256x10 at 200 nodes is a genuine near-peer for
+  Stockfish@20k (calibration 1W 3D) and differently shaped → `experiments/lc0_line_t1_n200` is the key test:
+  seeds LostFish-tol0 / line1 / line2 / Stockfish at 20k nodes, same openings.
+- Lichess ops lesson: three restarts in one day put the event stream into a 429 loop for 2.5 h (7.5k retries,
+  0 games). Rule: restart at most once, then leave it; if rate-limited, stop for 10 min before starting again.
