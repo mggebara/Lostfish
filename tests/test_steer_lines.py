@@ -163,3 +163,71 @@ def test_expected_eval_is_weighted_mean(depth: int) -> None:
     )
     assert ex.expected_eval == 100 and len(ex.replies) == 2 and len(ex.lines) == 2
     assert all(len(line) == 2 * depth - 1 for line in ex.lines)
+
+
+class WidthEvaluator(FakeEvaluator):
+    """multipv=2 returns the first two legal moves with scripted cps; cp of a position from a table."""
+
+    def __init__(self, table=None, default=10):
+        super().__init__(table, default)
+
+    def analyse(self, board, *, nodes, pov, multipv=1, **_):
+        self.calls.append((board.fen(), nodes))
+        legal = list(board.legal_moves)
+        cp = self.table.get(board.board_fen(), self.default)
+        return [_Line(m, cp, i + 1) for i, m in enumerate(legal[: max(1, multipv)])]
+
+
+def test_tree_width1_equals_line_value() -> None:
+    from lostfish.steer import tree_value
+
+    kw = {"replies_left": 2, "line_nodes": 10, "eval_nodes": 20}
+    a = line_value(chess.Board(), chess.WHITE, FakeOpponent(), FakeEvaluator(default=7), **kw)
+    b = tree_value(
+        chess.Board(), chess.WHITE, FakeOpponent(), FakeEvaluator(default=7), width=1, **kw
+    )
+    assert a == b
+
+
+def test_tree_picks_best_branch_and_counts_leaves() -> None:
+    from lostfish.steer import tree_value
+
+    # Leaf eval depends on the position: make the second candidate's branch score higher by giving
+    # positions reached after Black's reply to the 2nd move a better cp via the default/table trick.
+    board = chess.Board()
+    legal = list(board.legal_moves)
+    b2 = board.copy()
+    b2.push(legal[1])  # our 2nd candidate
+    reply = list(b2.legal_moves)[-1]  # FakeOpponent plays the last legal move
+    b2.push(reply)
+    ev = WidthEvaluator(table={b2.board_fen(): 95}, default=10)
+    val, path, _evals = tree_value(
+        board,
+        chess.WHITE,
+        FakeOpponent(),
+        ev,
+        replies_left=1,
+        width=2,
+        line_nodes=10,
+        eval_nodes=20,
+    )
+    assert val == 95 and path[0] == legal[1].uci() and len(path) == 2
+    # one MultiPV proposal search + 2 leaf evals
+    assert [n for _, n in ev.calls] == [10, 20, 20]
+
+
+def test_tree_terminal_and_decisive_stop() -> None:
+    from lostfish.steer import tree_value
+
+    ev = WidthEvaluator(default=900)
+    val, path, _evals = tree_value(
+        chess.Board(),
+        chess.WHITE,
+        FakeOpponent(),
+        ev,
+        replies_left=2,
+        width=2,
+        line_nodes=10,
+        eval_nodes=20,
+    )
+    assert val == 900 and path == [] and len(ev.calls) == 1

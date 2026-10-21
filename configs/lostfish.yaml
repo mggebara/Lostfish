@@ -32,6 +32,7 @@ steer:
   min_reply_weight: 0.02     # replies below this weight are not evaluated (rest renormalised)
   line_depth: 1              # opponent replies per exploit line; >1 = victim-play rollout (our best + predicted reply)
   line_nodes: null           # nodes for our intermediate moves in a line (default eval_nodes/2)
+  tree_width: 1              # our candidates per node inside exploit lines; >1 = victim-play tree (K^depth leaves)
   decisive_cp: 600           # stop a line early once our search sees |eval| >= this
   min_gain_cp: 0             # deviate from Stockfish's best only if the steer score beats it by this much
   lc0_path: lc0              # Lc0 binary for lc0_policy (Maia) opponent proxies; weights come from the profile

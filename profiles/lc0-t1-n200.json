@@ -1,0 +1,19 @@
+{
+ "name": "lc0-t1-n200",
+ "version": 1,
+ "built_at": "2026-10-19",
+ "n_games": 0,
+ "n_positions": 0,
+ "rating": null,
+ "proxy": "lc0_policy",
+ "effective_depth": 8,
+ "depth_agreement": {},
+ "base_blunder_rate": 0.0,
+ "weak_clusters": [],
+ "openings": [],
+ "notes": {
+  "lc0_weights": "engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz",
+  "proxy_note": "Exact victim model: lc0 T1 searched to the victim's own 200 nodes (bestmove + visit-count alternates)",
+  "lc0_nodes": 200
+ }
+}

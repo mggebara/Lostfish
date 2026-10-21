@@ -153,6 +153,99 @@ def line_value(
     return cp, moves, evals
 
 
+def tree_value(
+    board: chess.Board,
+    pov: chess.Color,
+    opponent: OpponentModel,
+    evaluator: Engine,
+    *,
+    replies_left: int,
+    width: int,
+    line_nodes: int,
+    eval_nodes: int,
+    decisive_cp: int = 600,
+    timings: dict[str, float] | None = None,
+) -> tuple[int, list[str], list[int]]:
+    """Victim-play tree from a position with *us* to move (DECISIONS 2026-10-21, Stage A).
+
+    At our nodes the evaluator proposes `width` candidates (MultiPV at `line_nodes`); at the victim's
+    nodes the opponent model plays its single predicted move. We choose: the value is the max over our
+    candidates of the continuation value, so with width=1 this is exactly `line_value`. Leaves are
+    evaluated with `eval_nodes`; terminal positions and decisive evals stop a branch early. Returns
+    (value from pov, uci moves of the best path, evals at our nodes along it). `board` is not mutated.
+    Cost: up to width**replies_left leaves.
+    """
+    if int(width) <= 1:
+        return line_value(
+            board,
+            pov,
+            opponent,
+            evaluator,
+            replies_left=replies_left,
+            line_nodes=line_nodes,
+            eval_nodes=eval_nodes,
+            decisive_cp=decisive_cp,
+            timings=timings,
+        )
+    term = terminal_eval(board, pov)
+    if term is not None:
+        return term, [], []
+    if int(replies_left) <= 0:
+        t = time.perf_counter()
+        lines = evaluator.analyse(board, nodes=int(eval_nodes), pov=pov)
+        _add_ms(timings, "eval", t)
+        if not lines:
+            raise RuntimeError(f"evaluator returned no lines for {board.fen()}")
+        return int(lines[0].cp), [], [int(lines[0].cp)]
+    t = time.perf_counter()
+    lines = evaluator.analyse(board, nodes=int(line_nodes), multipv=int(width), pov=pov)
+    _add_ms(timings, "line", t)
+    if not lines:
+        raise RuntimeError(f"evaluator returned no lines for {board.fen()}")
+    lines = sorted(lines, key=lambda ln: ln.rank)
+    top_cp = int(lines[0].cp)
+    if abs(top_cp) >= decisive_cp:
+        return top_cp, [], [top_cp]
+    best_val: int | None = None
+    best_path: list[str] = []
+    best_evals: list[int] = []
+    for ln in lines:
+        if not board.is_legal(ln.move):
+            continue
+        b = board.copy()
+        b.push(ln.move)
+        path = [ln.move.uci()]
+        evals = [int(ln.cp)]
+        term = terminal_eval(b, pov)
+        if term is not None:
+            val, sub_path, sub_evals = term, [], []
+        else:
+            t = time.perf_counter()
+            dist = _prune(opponent.predict_reply(b, top_n=1), 0.0)
+            _add_ms(timings, "proxy", t)
+            if not dist or not b.is_legal(dist[0][0]):
+                raise RuntimeError(f"opponent model gave no legal reply in {b.fen()}")
+            b.push(dist[0][0])
+            path.append(dist[0][0].uci())
+            val, sub_path, sub_evals = tree_value(
+                b,
+                pov,
+                opponent,
+                evaluator,
+                replies_left=int(replies_left) - 1,
+                width=width,
+                line_nodes=line_nodes,
+                eval_nodes=eval_nodes,
+                decisive_cp=decisive_cp,
+                timings=timings,
+            )
+        if best_val is None or val > best_val:
+            best_val, best_path, best_evals = val, path + sub_path, evals + sub_evals
+    if best_val is None:  # no legal candidate line (should not happen: terminal handled above)
+        return top_cp, [], [top_cp]
+    return best_val, best_path, best_evals
+
+
 def exploit_eval(
     after: chess.Board,
     pov: chess.Color,
@@ -165,6 +258,7 @@ def exploit_eval(
     line_depth: int = 1,
     line_nodes: int | None = None,
     decisive_cp: int = 600,
+    tree_width: int = 1,
     timings: dict[str, float] | None = None,
 ) -> Exploit:
     """Expected eval (pov) of `after` (opponent to move) against the opponent model.
@@ -206,12 +300,13 @@ def exploit_eval(
                 ev = int(lines[0].cp)
                 evals = [ev]
             elif ev is None:
-                ev, more, evals = line_value(
+                ev, more, evals = tree_value(
                     after,
                     pov,
                     opponent,
                     evaluator,
                     replies_left=depth - 1,
+                    width=int(tree_width),
                     line_nodes=lnodes,
                     eval_nodes=int(eval_nodes),
                     decisive_cp=decisive_cp,
@@ -335,6 +430,7 @@ def pick_detailed(
         line_nodes = knob(cfg, "steer", "line_nodes", None)
         decisive = int(knob(cfg, "steer", "decisive_cp", 600))
         min_gain = float(knob(cfg, "steer", "min_gain_cp", 0.0))
+        tree_width = int(knob(cfg, "steer", "tree_width", 1))
         last_cost = 0.0
         for i, cand in enumerate(cands):
             started = time.monotonic()
@@ -358,6 +454,7 @@ def pick_detailed(
                 line_depth=line_depth,
                 line_nodes=int(line_nodes) if line_nodes else None,
                 decisive_cp=decisive,
+                tree_width=tree_width,
                 timings=timings,
             )
             t = time.perf_counter()
