@@ -173,3 +173,17 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   verification search before certification. The control then equals Stockfish by construction.
 - Lichess (steering, since 21:16): 1W 3D 1L; first rated loss (vs CruelKen 3036). Casual mid-band game vs
   RomanticBot2 (2312): win.
+
+## 2026-10-21 — Certifier v2 at 20k vs Lc0 near-peer: clean control equals Stockfish; steering now costs
+
+- `experiments/lc0_v2_t1_n200` (640 games, 0 problems), vs lc0 T1@200, 64 games each:
+  **Stockfish 76.6%, v2 control 73.4%, v2 + 2-ply 68.0%, v2 + 1-ply 64.8%** (±9.5). Control vs Stockfish
+  head-to-head 50.0%: the single-PV certifier reproduces plain Stockfish as designed (MultiPV tax gone).
+- With a strong best move to deviate from, steering is **negative**: line1 −8.6, line2 −5.4 vs the control
+  (not significant at n=64, but the sign flipped from the MultiPV runs). Reading: the "+3/+6 over its own
+  certifier" seen with MultiPV was mostly the exploit search's extra evaluations repairing a noisy rank-1
+  move, not opponent exploitation. Deviating from Stockfish's actual best within 30 cp, with min_gain 10,
+  gives up more than the predicted opponent errors return, even with a same-net policy model.
+- Open lever before giving up: a stricter deviation policy (small tolerance, large min_gain) — only the few
+  lines with a big predicted edge. Measurable offline from this run's telemetry (realised vs predicted gain
+  by predicted-edge bin). Final high-budget test running overnight: `experiments/field_v2_600k`.
