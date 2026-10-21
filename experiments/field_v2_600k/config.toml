@@ -1,0 +1,111 @@
+# Certifier v2 at the plan's blitz budget (600k nodes) vs the Stockfish field (trivially beaten d8/elo2600
+# dropped). Seeds: v2 control (= Stockfish by construction), v2 + 1-ply, v2 + 2-ply line search, Stockfish.
+# 6 opponents x 24 rounds x 2 = 48 games per pairing (1,440 games, ~5 h). Generic profile (depth proxy).
+rounds = 24
+games = 2
+concurrency = 4
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261019
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+extra_args = ["-tournament", "gauntlet", "-seeds", "4"]
+
+[each]
+# nodes set per engine: a shared `nodes` under [each] overrode the per-engine limits in gauntlet_v1
+
+# ---- seeds -----------------------------------------------------------------
+[[engine]]
+name = "LostFish-v2-tol0"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_tol0.yaml"
+nodes = 600000
+[engine.options]
+Steering = true
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "LostFish-v2-line1"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_line1.yaml"
+nodes = 600000
+[engine.options]
+Steering = true
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "LostFish-v2-line2"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_line2.yaml"
+nodes = 600000
+[engine.options]
+Steering = true
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+nodes = 600000
+[engine.options]
+Threads = 1
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+# ---- field: shallow searchers -----------------------------------------------
+[[engine]]
+name = "SF-d10"
+cmd = "engines/stockfish"
+depth = 10
+[engine.options]
+Threads = 1
+Hash = 16
+
+[[engine]]
+name = "SF-d12"
+cmd = "engines/stockfish"
+depth = 12
+[engine.options]
+Threads = 1
+Hash = 16
+
+[[engine]]
+name = "SF-d14"
+cmd = "engines/stockfish"
+depth = 14
+[engine.options]
+Threads = 1
+Hash = 16
+
+# ---- field: node-limited near-peers -----------------------------------------
+[[engine]]
+name = "SF-n150k"
+cmd = "engines/stockfish"
+nodes = 150000
+[engine.options]
+Threads = 1
+Hash = 16
+
+[[engine]]
+name = "SF-n300k"
+cmd = "engines/stockfish"
+nodes = 300000
+[engine.options]
+Threads = 1
+Hash = 16
+
+# ---- field: strength-limited (noisy move choice) ----------------------------
+[[engine]]
+name = "SF-elo3000"
+cmd = "engines/stockfish"
+nodes = 600000
+[engine.options]
+Threads = 1
+Hash = 16
+UCI_LimitStrength = true
+UCI_Elo = 3000
