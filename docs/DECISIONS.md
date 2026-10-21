@@ -193,3 +193,25 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   +3.3 / −4.0 (line1/line2), 20–50 → +2.7 / +3.4, **≥ 50 → +21.7 / +7.4**. Only big-edge deviations beat the
   baseline; small-edge ones lose. Queued `experiments/lc0_v2g50_t1_n200` with `min_gain_cp: 50`
   (variants `v2_line1_g50`, `v2_line2_g50`) to run after the 600k field test.
+
+## 2026-10-21 — Direction: Lc0 as the fixed victim (PLAN §6 Phase 5), agreed with Matthew
+
+- Steering (certify-then-steer within a tolerance) has a non-positive marginal effect in every controlled
+  run so far (see entries above); the strict min-gain-50 variant is the last steering test. Matthew agreed
+  that focusing on Lc0 as a fixed victim is the best way forward.
+- Design (this is the write-up CLAUDE.md rule 3 requires before any custom search):
+  1. **Victim**: lc0 + T1-256x10 at a fixed node budget N_v (start 200; Stockfish@20k scores ~77% there),
+     Threads=1, fixed hash. Deterministic enough to model exactly by running the same engine.
+  2. **Exact victim model**: `Lc0PolicyProxy(nodes=N_v)` — the victim engine itself as the opponent model
+     (top-1 = its bestmove; alternates from root visit counts). Costs one victim search per prediction.
+  3. **Victim-play search (Stage A, no learning)**: at our nodes, K candidates (Stockfish MultiPV at a
+     shallow budget, later a learned proposer); at victim nodes, exactly the victim's move; depth d of our
+     moves; leaves scored by Stockfish at the leaf budget. Root choice = max over victim-play lines, still
+     gated by the single-PV certifier (never outside the tolerance of Stockfish's minimax best) and a
+     min-gain threshold. This generalises `steer.line_value` from a line to a K-ary tree over our moves.
+  4. **Measurement**: LostFish-victimplay vs lc0@N_v against Stockfish@B vs lc0@N_v, same openings, matched
+     total compute; report the exploitability curve over N_v ∈ {50, 200, 800}.
+  5. **Stage B (learning, PLAN Phase 3/5)**: from Stage A games and the 549k annotated positions, train a
+     proposer/value net (PyTorch on MPS) that predicts "victim blunders within n plies" and proposes
+     trap-setting candidates, replacing Stockfish MultiPV as the candidate source.
+- Lichess bot stays on steering=true for data; Lichess is not the measurement for this phase.
