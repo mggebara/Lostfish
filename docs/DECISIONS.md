@@ -312,3 +312,7 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   (fresh openings `srand 20261022`, 400 games each, ~7 h) chained after the Stockfish match. Combined paired sample
   600 games → SE ≈ 1.4. Phase 5a (blind-spot mining) is on hold while the replication runs: if it holds, the next
   question is where the gain comes from (deviation moves in telemetry) and how to cut the 230× cost.
+- Addendum 02:17 — second control done: `lc0_long_n200_stockfish` **69.8%** (89W 101D 10L, 200 games, clean). Paired
+  by opening: tree2 − control **+5.5 [+0.7, +10.3]**; tree2 − Stockfish **+7.2 [+2.4, +12.1]**; control − Stockfish
+  +1.8 [−2.1, +5.6] (the two controls are equivalent, as designed). Two independent controls, both beaten with
+  intervals clear of zero; replication (`lc0_rep_n200_*`, 400 games each, fresh openings) started 02:10.
