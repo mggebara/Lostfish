@@ -270,3 +270,23 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   Stockfish's minimax already harvests the errors; 94× more compute buys nothing measurable.
 - Next: second point at victim @200 (`lc0_victim_t1_n200`, running since 20:31, 160 games), where the victim
   is a near-peer (Stockfish@20k ~77–79%) and the ceiling is gone. Stage B stays gated on a positive Stage A margin.
+
+## 2026-10-21 — Stage A, second exploitability point: victim lc0 T1@200 (16 games per pairing: too noisy, rerun long)
+
+- `experiments/lc0_victim_t1_n200`: as the @50 run but victim at 200 nodes and exact model `lc0-t1-n200`; 8 rounds,
+  16 games per pairing, 160 total; 0 time losses, 0 illegal moves, 0 crashes, 0 warnings.
+- vs lc0@200 (±19, n=16): **Stockfish 90.6%, control 87.5%, tree2-exact 65.6%, line2-g50 56.2%**. Won games vs
+  lc0: tree2-exact 151 plies vs control 119 — slower, not faster. Seed-vs-seed: tree2-exact 62.5% vs the control
+  and 53.1% vs Stockfish (n=16, noise).
+- Telemetry (3.6k moves): tree2-exact deviated on 2.1% of moves (77); median certified cost 1 cp (max 32), median
+  predicted edge 70 cp; **4.8 s per move** (control 18 ms, ~260×), 6.9 s on deviating moves. Realised change in
+  our next certified eval after a deviation: **+33.5 cp (n=76) vs +3.2 baseline**; 8 deviations were followed by
+  a ≥100 cp gain, none by a ≥100 cp drop. Locally the deviations look profitable while the game score says the
+  opposite — the same disconnect seen with min-gain-50 steering. Suspect: the evaluator budgets (leaves at
+  `eval_nodes` 5000, certifier 20k, depth ~9–12) are too shallow to be truth against an Lc0 net at 200 nodes, so
+  "gains" measured by shallow Stockfish may be evaluation artefacts rather than real advantages.
+- Status: the point estimate is −22 vs the control, but ±19 does not exclude a small positive effect and the
+  per-move telemetry points the other way. This is a statistics problem, so time helps (Matthew: "time is on our
+  side"). **Decision:** rerun long — `experiments/lc0_victim_t1_n200_long`: gauntlet, seeds Stockfish / control /
+  tree2-exact vs lc0@200, 100 rounds → 200 games per seed (±5–6 at these score levels), concurrency 5, ~6 h.
+  Phase 5a (blind-spot mining, PLAN) starts only if the long run confirms no margin; Stage B stays gated.
