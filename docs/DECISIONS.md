@@ -250,3 +250,23 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   still loses to the very opponent it models, and loses more with the deeper line.
 - **Decision:** steering is closed as negative; no further certify-then-steer variants. All effort goes
   to the Lc0-victim line (Stage A running: `lc0_victim_t1_n50`, then `lc0_victim_t1_n200`).
+
+## 2026-10-21 — Stage A, first exploitability point: victim lc0 T1@50, exact victim model + 2-ply victim-play tree
+
+- `experiments/lc0_victim_t1_n50`: 20k nodes for us, victim lc0 T1-256x10 at 50 nodes. Seeds: Stockfish, v2 control,
+  v2 + 2-ply line `min_gain_cp 50` (1-node policy proxy), and v2 + 2-ply tree (`tree_width 2`, `min_gain_cp 50`)
+  with the **exact victim model** (`lc0-t1-n50`: the victim engine itself at its own 50 nodes). 32 games per
+  pairing, 320 total; 0 time losses, 0 illegal moves, 0 crashes.
+- vs lc0@50 (±13.4, n=32): **Stockfish 95.3%, control 95.3%, tree2-exact 92.2%, line2-g50 84.4%**. Plies to
+  decision in won games vs lc0: tree2-exact 109, control 112, line2-g50 120, Stockfish 122. Head-to-head
+  pairings all 40–59%, i.e. noise.
+- Telemetry (7k moves per seed): tree2-exact deviated from Stockfish's best on 3.7% of moves (264); median
+  certified cost 1 cp (max 39), median predicted victim-play edge 90 cp. Cost: **2.06 s per move** on average
+  (control 22 ms, ~94×), 3.5 s on deviating moves, max 28.7 s; the exact victim model is ~96% of steering time
+  (about 15 victim searches per move). line2-g50: 6.7% deviations, 198 ms per move.
+- Reading: the ceiling (a 50-node victim loses ~95% to everything) hides small effects, but nothing points
+  to a positive margin. The exact victim model with a 2-ply tree does not outscore the control, and its
+  slightly faster wins (109 vs 112 plies) are within noise. At 50 nodes the victim blunders so often that
+  Stockfish's minimax already harvests the errors; 94× more compute buys nothing measurable.
+- Next: second point at victim @200 (`lc0_victim_t1_n200`, running since 20:31, 160 games), where the victim
+  is a near-peer (Stockfish@20k ~77–79%) and the ceiling is gone. Stage B stays gated on a positive Stage A margin.
