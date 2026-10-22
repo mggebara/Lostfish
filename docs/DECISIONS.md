@@ -316,3 +316,21 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   by opening: tree2 − control **+5.5 [+0.7, +10.3]**; tree2 − Stockfish **+7.2 [+2.4, +12.1]**; control − Stockfish
   +1.8 [−2.1, +5.6] (the two controls are equivalent, as designed). Two independent controls, both beaten with
   intervals clear of zero; replication (`lc0_rep_n200_*`, 400 games each, fresh openings) started 02:10.
+
+## 2026-10-22 07:41 — Paused for a machine shutdown; replication partial; next direction agreed (supervised victim-error predictor, GPU box coming)
+
+- Replication `lc0_rep_n200_tree2` stopped at **355/400 games: 191W 150D 14L = 74.9%** vs lc0@200 (fresh openings,
+  `srand 20261022`). The paired control on these openings (`lc0_rep_n200_control`, fast, ~50 min) has NOT run yet, so
+  the replication is not yet scored; pair on the rounds tree2 completed. Bot stopped cleanly (SIGINT between games).
+- Agreed with Matthew this morning: move toward learning. Plan (supersedes "Phase 5a only if Stage A fails"):
+  1. Data: control-vs-lc0@200 games (~300/h at concurrency 5) + existing ~1.7k games; label every victim move with
+     Stockfish loss at 100k nodes minus a depth-8 Stockfish baseline loss (isolate victim-specific error). Target 200k.
+  2. Model: small conv net on board planes (PyTorch, MPS here), predicting expected victim error; GBM on hand features
+     as baseline; gate = held-out AUC clearly above a sharpness-only baseline. This dataset IS the Phase 5a mine.
+  3. Steering: score certified candidates by predicted victim error 2–4 plies out; exact model only where the net
+     says errors are likely. Gauntlet vs control at matched nodes AND matched wall-clock.
+  4. Stage B self-play on Matthew's GPU box (another machine, Claude Code being set up "over the next day or so").
+- Resume, in order: (a) `nohup scripts/run_lichess_bot.sh > logs/lichess-bot.log 2>&1 &` (start once);
+  (b) `nohup scripts/run_queue.sh experiments/lc0_rep_n200_control > logs/queue_rep.log 2>&1 &`, then pair with
+  `lc0_rep_n200_tree2/games.pgn` by Round (snippet in DECISIONS 2026-10-22 01:49 entry's analysis: load by Round+colour);
+  (c) start step 1 (write `mining/victim_errors.py`: generate + label) once the control match frees the machine.
