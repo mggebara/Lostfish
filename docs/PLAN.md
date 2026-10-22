@@ -196,10 +196,56 @@ Gate: learned proxy beats the depth proxy on held-out move prediction for ≥70%
 
 Only after Phase 3. This is the original research plan:
 
+> Status 2026-10-21: started before Phase 3 (see DECISIONS, "Direction: Lc0 as the fixed victim"). Stage A = victim-play tree search (`steer.tree_width`) with the exact victim model, measured as the exploitability curve over victim node budgets 50/200. Phase 5a below is the agreed next step if Stage A shows no positive margin at victim@200.
+
 - Freeze a victim (Stockfish or Lc0 at a fixed node budget).
 - Train an adversary net with reward = wins only, using the victim model inside the adversary's search (victim-play MCTS, as in Wang et al.). Seed from Phase 1 weak-cluster positions. Raise the victim's budget as the win rate stabilizes.
 - Expect mostly draws against Stockfish; Lc0 is the closer analogue to the Go attack and the better first victim.
 - Report the exploitability curve: win rate vs. victim node budget.
+
+### Phase 5a — Victim blind-spot mining (CPU/Metal only; runs if Stage A fails at victim@200)
+
+Agreed with Matthew 2026-10-21. Purpose: before any adversary training or hardware spend, find out whether the
+Lc0 victim has *systematic* misjudgments (fortress, zugzwang, pawn endings, promotion races, out-of-distribution
+structures) that survive its own search and are reachable in play, and measure how far from Stockfish's best move
+the steering moves toward them lie. This decides whether the ML-victim idea has room inside Rule 2 ("never outside
+the certified set") or needs a tolerance change, which is Matthew's call.
+
+Inputs:
+- 549k annotated positions, `data/annot/*.parquet` (Stockfish @20k, eval and best move per depth).
+- Positions from our own gauntlet games vs lc0 (`experiments/lc0_*/games.pgn`): positions the victim actually
+  reached, with the move it played.
+- Exact victim model `Lc0PolicyProxy(nodes=N)` (T1-256x10): value (Q → cp), bestmove, root visits. N=1 is the raw
+  policy/value head (~2 ms); N=200 is the victim as played (~0.7 s).
+
+Procedure:
+1. **Pass 1, cheap, all positions.** Victim value head at 1 node vs Stockfish@20k. Keep positions where the value
+   is ≥ 150 cp off or the victim's top policy move loses ≥ 100 cp. Expect a few percent.
+2. **Pass 2, victim at 200 nodes, shortlist ≤ 20k.** Does the error survive the victim's search? Keep positions
+   where its bestmove still loses ≥ 100 cp or its value is still ≥ 150 cp off. Re-annotate the survivors with
+   Stockfish at 1M nodes so the "truth" is trustworthy (~1 s each, 8 workers).
+3. **Game-mined blunders.** Every lc0 move in our gauntlet PGNs that lost ≥ 100 cp by Stockfish@1M: direct
+   in-play evidence. Join with step 2.
+4. **Characterise.** Features from `lostfish/features.py` plus the Phase 1 fingerprint/cluster tooling
+   (`mining/cluster.py`): material and phase, pawn structure, king safety, mobility, tablebase distance,
+   fortress/zugzwang indicators (null-move eval swing, no-progress), promotion proximity. Cluster; report each
+   cluster's count, mean victim error, and lift (rate in the shortlist / rate in the full population).
+5. **Reachability.** For each cluster: how often a certified candidate (within 30 cp of Stockfish's best) in an
+   ordinary middlegame position leads toward it within 2–4 plies, and the tolerance that would be needed to reach
+   it when 30 cp does not suffice.
+
+Gate (a decision point; flag it to Matthew):
+- **Pass:** at least one cluster with ≥ 200 positions, lift ≥ 5×, mean victim error ≥ 150 cp at 200 nodes that
+  persists at 800 nodes on a 200-position sample, and reachable within 30 cp in ≥ 1% of middlegame positions →
+  build a steering target feature for it and re-run Stage A at victim@200 with that feature (cheap).
+- **Pass with rule change:** clusters exist but need tolerance > 30 cp → Matthew decides on relaxing Rule 2 for
+  the victim phase.
+- **Fail:** no cluster persists at 200 nodes → "TIME WILL NOT HELP" for the ML-victim idea on this hardware; the
+  remaining path is the RL adversary (Stage B), which needs a GPU.
+
+Cost: pass 1 ~30 min (549k × 2 ms, one Lc0 process on Metal); pass 2 ≤ 4 h; re-annotation ~1 h on 8 workers;
+clustering minutes. Deliverables: `mining/victim_blindspots.py`, `experiments/blindspots_t1_n200/REPORT.md`
+(clusters, lift, reachability, example FENs), a DECISIONS entry.
 
 ## 7. Core metric and protocol
 
