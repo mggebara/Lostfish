@@ -293,3 +293,22 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
 - Correction (22:20): fastchess's gauntlet mode also pairs the seeds with each other (1200 games scheduled, half of
   them slow seed-vs-seed games that answer nothing). Killed at game 7 and split into three 2-engine matches, each
   200 games vs lc0@200: `experiments/lc0_long_n200_tree2` (first, ~5 h), `lc0_long_n200_control`, `lc0_long_n200_stockfish`.
+
+## 2026-10-22 — Long N_v=200 point: first positive signal — exact-model tree +5.5 over the control (paired, 200 games)
+
+- `experiments/lc0_long_n200_tree2` and `lc0_long_n200_control`: 200 games each vs lc0 T1@200, identical openings per
+  round (same `srand`), 20k nodes, concurrency 5; 0 time losses / illegal moves / crashes in both.
+- **tree2-exact 77.0%** (115W 78D 7L) vs **control 71.5%** (93W 100D 7L). Paired by opening: **+5.5 points, SE 2.4,
+  95% CI [+0.7, +10.3]**; tree2 did better in 51 openings, the control in 27, same result in 122. By colour: tree2
+  80.5% / 73.5% (W/B) vs control 76.0% / 67.0%. The 16-game point (65.6%) was a low outlier, as suspected.
+- Telemetry (10.8k moves): 340 deviations (3.1%), median certified cost 0 cp (max 36), median predicted edge 83 cp,
+  realised next-eval change +45 cp vs +10.5 baseline, 45 large gains vs 1 large drop. 4.2 s per move (~230× the control).
+- Caveats, stated before anyone gets excited: (1) this is the first positive comparison out of roughly a dozen in
+  this project, so a p≈0.02 result is compatible with chance after multiple comparisons; (2) the second control
+  (plain Stockfish, `lc0_long_n200_stockfish`) is still running — 39 games, 74.4% so far; (3) the gain costs ~230×
+  compute per move, so at equal wall-clock it is a loss — the claim is only "the victim is exploitable by a
+  certified move choice at fixed nodes", which is the Phase 5 question, not the Phase 2 one.
+- **Decision:** replicate before believing it. Queued `experiments/lc0_rep_n200_tree2` + `lc0_rep_n200_control`
+  (fresh openings `srand 20261022`, 400 games each, ~7 h) chained after the Stockfish match. Combined paired sample
+  600 games → SE ≈ 1.4. Phase 5a (blind-spot mining) is on hold while the replication runs: if it holds, the next
+  question is where the gain comes from (deviation moves in telemetry) and how to cut the 230× cost.

@@ -1,0 +1,35 @@
+# REPLICATION of the long N_v=200 point with fresh openings (srand 20261022) and 200 rounds x 2 = 400 games. The first
+# 200-game matches gave tree2-exact 77.0% vs control 71.5% vs lc0@200 on matched openings (paired +5.5, SE 2.4).
+# Analyse paired with the matching lc0_rep_n200_* match (same srand => same opening per round).
+rounds = 200
+games = 2
+concurrency = 5
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261022
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-tol0"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_tol0.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n200"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 200
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1
