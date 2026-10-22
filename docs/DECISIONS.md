@@ -233,3 +233,20 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   `nohup scripts/run_queue.sh experiments/lc0_v2g50_t1_n200 experiments/lc0_victim_t1_n50 > logs/queue.log 2>&1 &`
 - Lichess (steering on, 2026-10-20 21:16 → 2026-10-21 08:10): 68 games, 35W 30D 3L; rated top band 6W 29D 3L,
   casual 1500–2500 band 29W 1D 0L. Bot stopped cleanly between games for the shutdown.
+
+## 2026-10-21 — Strict min-gain-50 steering (the last steering test): still negative vs Lc0@200 at 20k
+
+- `experiments/lc0_v2g50_t1_n200`: 20k nodes, round robin of Stockfish, v2 control (tol0), v2 + 1-ply
+  line with `min_gain_cp: 50`, v2 + 2-ply line with `min_gain_cp: 50`, and lc0 T1@200 (the opponent the
+  Lc0 policy proxy models). 64 games per pairing, 640 total; 0 time losses, 0 illegal moves, 0 crashes.
+- vs lc0@200 (±9.5 each, n=64): **Stockfish 78.9%, v2 control 72.7%, line2-g50 68.0%, line1-g50 64.8%**.
+  Pooled, steering 66.4% vs controls 75.8% (n=128 each): −9.4, about two standard errors. Head-to-head:
+  control vs Stockfish 50.0% (Stockfish-equivalent as designed); the g50 variants scored 54.7% / 54.7% vs
+  Stockfish and 53.1% / 53.9% vs the control (n=64, ±12: noise). Note the 6-point gap between the two
+  identical engines vs lc0 — that is the noise floor at n=64.
+- Telemetry (14k moves per seed): deviations from Stockfish's best on 3.6% (line1) / 6.9% (line2) of
+  moves; 88 / 197 ms per move vs 17 ms for the control, i.e. 5× / 11× the compute. The strictest gate we
+  have (deviate only when the predicted victim-play edge is ≥ 50 cp, with a 70%-accurate policy proxy)
+  still loses to the very opponent it models, and loses more with the deeper line.
+- **Decision:** steering is closed as negative; no further certify-then-steer variants. All effort goes
+  to the Lc0-victim line (Stage A running: `lc0_victim_t1_n50`, then `lc0_victim_t1_n200`).
