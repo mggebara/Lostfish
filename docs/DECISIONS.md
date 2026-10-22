@@ -290,3 +290,6 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   side"). **Decision:** rerun long — `experiments/lc0_victim_t1_n200_long`: gauntlet, seeds Stockfish / control /
   tree2-exact vs lc0@200, 100 rounds → 200 games per seed (±5–6 at these score levels), concurrency 5, ~6 h.
   Phase 5a (blind-spot mining, PLAN) starts only if the long run confirms no margin; Stage B stays gated.
+- Correction (22:20): fastchess's gauntlet mode also pairs the seeds with each other (1200 games scheduled, half of
+  them slow seed-vs-seed games that answer nothing). Killed at game 7 and split into three 2-engine matches, each
+  200 games vs lc0@200: `experiments/lc0_long_n200_tree2` (first, ~5 h), `lc0_long_n200_control`, `lc0_long_n200_stockfish`.

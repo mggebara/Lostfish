@@ -1,0 +1,36 @@
+# Long N_v=200 exploitability point, split into one 2-engine match per seed (fastchess's gauntlet mode also pairs seeds
+# with each other, which doubled the games). Seed: v2 + victim-play tree (depth 2, width 2, min_gain 50) with the EXACT victim model (lc0@200, profile lc0-t1-n200) at 20k nodes vs the victim lc0 T1 @200 nodes.
+# 100 rounds x 2 = 200 games (+-5-6 at these score levels). Analyse the three matches together:
+#   for e in experiments/lc0_long_n200_*; do .venv/bin/python scripts/seed_scores.py $e; done
+rounds = 100
+games = 2
+concurrency = 5
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261021
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-tree2-exact"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_tree2_g50.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1-n200"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n200"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 200
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1
