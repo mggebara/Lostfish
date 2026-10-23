@@ -25,6 +25,27 @@ from torch import nn
 
 PLANES = 18
 BLUNDER_CP = 100
+BLUNDER_WP = 0.10  # drop in expected score (win-probability space) that counts as a blunder
+
+
+def win_prob(cp: np.ndarray) -> np.ndarray:
+    """Expected score from centipawns (logistic, 400 cp per decade); mates saturate."""
+    return 1.0 / (1.0 + np.power(10.0, -np.clip(cp, -3000, 3000) / 400.0))
+
+
+def targets(df: pd.DataFrame, target: str) -> tuple[np.ndarray, np.ndarray, str]:
+    """(blunder label, regression target, description). `wp` measures the victim's error as the drop in
+    expected score, so a 100 cp slip at +800 is not a blunder while the same slip at 0.00 is."""
+    if target == "cp":
+        loss = df["loss"].to_numpy()
+        reg = np.log1p(np.clip(loss, 0, 3000)).astype(np.float32)
+        return (loss >= BLUNDER_CP).astype(np.float32), reg, f"loss>={BLUNDER_CP}cp"
+    dwp = win_prob(df["cp_best"].to_numpy()) - win_prob(df["cp_after"].to_numpy())
+    return (
+        (dwp >= BLUNDER_WP).astype(np.float32),
+        (10.0 * np.clip(dwp, 0, 1)).astype(np.float32),
+        f"dWP>={BLUNDER_WP}",
+    )
 
 
 # --- encoding ------------------------------------------------------------------------------------
@@ -156,19 +177,28 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--min-pieces", type=int, default=7, help="drop tablebase-range positions (< this)"
     )
+    ap.add_argument(
+        "--target", choices=["wp", "cp"], default="wp", help="blunder definition (see targets())"
+    )
+    ap.add_argument(
+        "--max-abs-cp", type=int, default=1500, help="drop decided positions (|cp_best| > this)"
+    )
     ap.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cpu")
     args = ap.parse_args(argv)
 
     df = pd.read_parquet(args.data)
-    df = df[(df["pieces"] >= args.min_pieces) & df["best"].notna()].reset_index(drop=True)
+    df = df[
+        (df["pieces"] >= args.min_pieces)
+        & df["best"].notna()
+        & (df["cp_best"].abs() <= args.max_abs_cp)
+    ].reset_index(drop=True)
     if args.max_rows and len(df) > args.max_rows:
         df = df.sample(args.max_rows, random_state=args.seed).reset_index(drop=True)
     tr, va = split_by_game(df, args.val_frac, args.seed)
-    y_bl = (df["loss"].to_numpy() >= BLUNDER_CP).astype(np.float32)
-    y_lg = np.log1p(np.clip(df["loss"].to_numpy(), 0, 3000)).astype(np.float32)
+    y_bl, y_lg, label_desc = targets(df, args.target)
     _log(
         f"{len(df)} positions, {df['game_id'].nunique()} games; train {len(tr)} / val {len(va)}; "
-        f"blunder rate {y_bl.mean():.3f}; device {args.device}"
+        f"blunder ({label_desc}) rate {y_bl.mean():.3f}; device {args.device}"
     )
     t0 = time.monotonic()
     X = encode_fens(df["fen"].tolist())
@@ -198,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
 
     base_bl, base_cp = df["baseline_loss"].to_numpy(), np.abs(df["cp_best"].to_numpy())
     _log(
-        f"baselines (val AUC for blunder>={BLUNDER_CP}): depth-10 SF loss {auc(base_bl[va], y_bl[va]):.3f}, "
+        f"baselines (val AUC for blunder {label_desc}): depth-10 SF loss {auc(base_bl[va], y_bl[va]):.3f}, "
         f"|cp_best| {auc(base_cp[va], y_bl[va]):.3f}, chance 0.500; params {n_params / 1e6:.2f}M"
     )
     best = {"auc": -1.0}
@@ -250,6 +280,9 @@ def main(argv: list[str] | None = None) -> int:
         "positions": len(df),
         "games": int(df["game_id"].nunique()),
         "blunder_rate": float(y_bl.mean()),
+        "target": args.target,
+        "label": label_desc,
+        "max_abs_cp": args.max_abs_cp,
         "baseline_auc_depth10_loss": auc(base_bl[va], y_bl[va]),
         "baseline_auc_abs_cp": auc(base_cp[va], y_bl[va]),
         "best": best,
