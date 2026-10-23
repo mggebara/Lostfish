@@ -1,0 +1,85 @@
+# CONTROL for the predictor gate: same as v2_pred_gate45 but the gate opens at random (26% of multi-candidate positions,
+# the rate the 0.45 gate opened at); the predictor is still loaded and scored so timing is identical.
+engines:
+  stockfish: engines/stockfish
+  stockfish_version: '19'
+  fastchess: engines/fastchess
+  fastchess_version: 1.8.2-alpha
+  syzygy_path: tb/syzygy
+  hash_mb: 64
+  threads: 1
+certify:
+  mode: single_pv_verify
+  proposal_fraction: 0.2
+  verify_fraction: 0.5
+  proposal_tolerance_cp: 60
+  multipv: 5
+  tolerance_cp: 30
+  tolerance_min_cp: 0
+  tighten_when_behind_cp: 150
+  volatility_depths: 4
+  volatility_half_cp: 100
+  low_clock_fraction: 0.15
+  expand_when_ahead_cp: 150
+  expand_when_ahead: 0.5
+steer:
+  lambda_weakness: 0.15
+  proxy_depth_cap: 12
+  replies: 2
+  reply_temperature_cp: 100
+  min_reply_weight: 0.02
+  line_depth: 2
+  line_nodes: null
+  tree_width: 2
+  decisive_cp: 600
+  min_gain_cp: 50
+  lc0_path: lc0
+  weakness_radius: 1.5
+  max_weakness: 2.0
+  proxy_hash_mb: 16
+  predictor_path: data/models/c128b8/victim_error_lc0-t1-n200.pt
+  predictor_mode: random
+  predictor_gate_threshold: 0.45
+  predictor_gate_rate: 0.26
+budgets:
+  bullet:
+    certify_nodes: 200000
+    eval_nodes: 50000
+    k: 3
+    proxy_depth_cap: 8
+  blitz:
+    certify_nodes: 600000
+    eval_nodes: 150000
+    k: 5
+    proxy_depth_cap: 12
+  rapid:
+    certify_nodes: 1500000
+    eval_nodes: 400000
+    k: 6
+    proxy_depth_cap: 14
+timeman:
+  moves_to_go_assumed: 30
+  increment_fraction: 0.8
+  min_move_ms: 50
+  reserve_ms: 300
+  nps_estimate: 700000
+profiles:
+  dir: profiles
+  fallback: _generic
+mining:
+  stockfish: engines/stockfish
+  hash_mb: 16
+  nodes: 20000
+  workers: 4
+  min_ply: 20
+  max_games: 300
+  min_games: 50
+  perf: bullet,blitz
+  since_days: 365
+  k: 8
+  blunder_cp: 100
+  clip_cp: 1000
+  min_cluster: 30
+  test_fraction: 0.2
+  min_coverage: 0.5
+  opening_plies: 8

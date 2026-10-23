@@ -448,3 +448,20 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
 - Decision: run gate 0.45 vs control long on fresh openings (`experiments/lc0_rep_n200_gate45`, `lc0_rep_n200_control2`,
   `srand 20261023`, 400 games each) to replace the 200-game estimate and test transfer to new openings; ~4 h, overnight.
   Shadow-seed side-effect control still pending (machine time).
+
+## 2026-10-23 05:16 — Gate 0.45 replication on fresh openings: +1.2 (not +5.0); combined +2.5 ± 1.5, about half the full tree
+
+- `experiments/lc0_rep_n200_gate45` vs `lc0_rep_n200_control2` (400 games each, fresh openings `srand 20261023`, clean):
+  gate 0.45 **72.8%** (201W 180D 19L) vs control **71.5%** (192W 188D 20L) → paired **+1.2 (SE 1.8, [−2.3, +4.8])**.
+  Combined with the first 200 openings (+5.0): **n=600, +2.5 (SE 1.5, 95% [−0.4, +5.4], z=1.7)**. The full tree's
+  combined figure is +5.8 (SE 1.6, n=555). The +5.0 was a high draw.
+- Telemetry on the fresh openings: gate opened on 26% of multi-candidate positions, deviations 1.56% of moves (the
+  tree: 3.1%), 1,594 ms per move. Gain per percentage point of deviations: gate ≈ 1.6, tree ≈ 1.9 — **no evidence
+  that the predictor selects higher-value deviations**; the gate cuts cost by suppressing deviations and the gain
+  shrinks roughly in proportion. Last night's "the predictor picks the moments that matter" is withdrawn as unproven.
+- What stands: the full exact tree +5.8 ± 1.6 (two opening sets). What is open: whether the predictor adds anything
+  over a random gate at the same open rate. **Decision:** run the direct control — `steer.predictor_mode: random`
+  (gate opens on a random 26% of multi-candidate positions, predictor still loaded for identical timing) vs the same
+  fresh openings (`experiments/lc0_rep_n200_gaterand`, 400 games, pairs with control2 and gate45). If random ≈ gate
+  0.45, the predictor's in-engine value is nil and the cost lever is simply "deviate less"; the predictor's remaining
+  role is offline (Phase 5a-style analysis) and as training signal for a model that predicts the *reply*, not the risk.

@@ -12,6 +12,7 @@ import dataclasses
 import logging
 import math
 import os
+import random
 import threading
 import time
 from collections.abc import Callable, MutableMapping
@@ -87,6 +88,9 @@ class SteeringPlayer:
         self.cfg = cfg
         self.predictor = None
         self._predictor_mode = str(knob(cfg, "steer", "predictor_mode", "gate"))
+        self._rng = random.Random(
+            os.getpid() ^ int(time.time() * 1000)
+        )  # for predictor_mode: random
         predictor_path = knob(cfg, "steer", "predictor_path", None)
         if predictor_path:
             from lostfish.predictor import VictimErrorPredictor
@@ -254,6 +258,11 @@ class SteeringPlayer:
         }
         if self._predictor_mode == "steer":
             return True
+        if (
+            self._predictor_mode == "random"
+        ):  # control: open the gate at random at the predictor gate's rate
+            rate = float(knob(self.cfg, "steer", "predictor_gate_rate", 0.25))
+            return self._rng.random() < rate
         threshold = float(knob(self.cfg, "steer", "predictor_gate_threshold", 0.5))
         return max(risks) >= threshold
 

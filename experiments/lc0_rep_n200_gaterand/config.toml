@@ -1,0 +1,35 @@
+# RANDOM-GATE CONTROL: the exact 2-ply tree runs on a random 26% of multi-candidate positions (the rate the predictor gate
+# 0.45 opened at), otherwise Stockfish's best. Fresh openings srand 20261023, 400 games vs lc0 T1@200; pairs with
+# lc0_rep_n200_control2 and lc0_rep_n200_gate45 by Round. Question: does the predictor beat a coin flip at choosing moments?
+rounds = 200
+games = 2
+concurrency = 5
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261023
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-gate-random"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_pred_gaterand.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1-n200"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n200"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 200
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1
