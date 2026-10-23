@@ -465,3 +465,23 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   fresh openings (`experiments/lc0_rep_n200_gaterand`, 400 games, pairs with control2 and gate45). If random ≈ gate
   0.45, the predictor's in-engine value is nil and the cost lever is simply "deviate less"; the predictor's remaining
   role is offline (Phase 5a-style analysis) and as training signal for a model that predicts the *reply*, not the risk.
+
+## 2026-10-23 07:34 — Random-gate control: the predictor adds nothing in-engine (predictor gate vs random gate +0.5 ± 1.7)
+
+- `experiments/lc0_rep_n200_gaterand` (exact tree on a random share of multi-candidate positions, predictor loaded but
+  ignored; fresh openings, 400 games, clean): **72.2%** vs lc0@200. Paired on the same openings: random gate vs control
+  **+0.8 (SE 1.9, [−3.0, +4.5])**; predictor gate vs control +1.2 (SE 1.8); **predictor gate vs random gate +0.5 (SE 1.7,
+  [−2.8, +3.8])**. The random gate opened less often than intended (16% vs 26% of multi-candidate positions; 0.90% of
+  moves deviated vs 1.56%) and still matched the predictor gate within noise.
+- Conclusion for step 3: the victim-error predictor (AUC 0.69) has **no measurable in-engine value**, neither as a
+  steerer (+0.0 ± 2.6) nor as a gate (+0.5 ± 1.7 over chance). Structural reason: certified candidates lead to
+  near-identical positions, and a position-level risk score cannot separate them or pick moments better than a coin
+  flip. More games could only resolve an effect too small to matter at 85× cost. **TIME WILL NOT HELP** for the
+  predictor-in-engine idea; it is closed. The predictor keeps an offline role (blind-spot analysis, Phase 5a).
+- Standing result, unchanged: the full exact 2-ply tree **+5.8 ± 1.6** over 555 paired games (+55 Elo vs Stockfish at
+  equal nodes against lc0@200), at ~236× compute because the victim model is the victim engine itself.
+- Options recorded for Matthew: (A) GPU box — the exact tree at ~50 ms/move, stronger victims (800+ nodes), the
+  regime where the thesis matters; (B) cheaper *exact-ish* model on this machine: the victim at fewer nodes (lc0@25/50/
+  100) as a proxy for lc0@200 — if its bestmove agrees ≥ 90% (the victim's own self-agreement on repeated positions is
+  94%), most of the +5.8 may survive at a fraction of the cost; measurement started; (C) shadow-seed side-effect
+  control; (D) pause steering work here until the GPU box.
