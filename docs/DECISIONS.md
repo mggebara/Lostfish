@@ -413,3 +413,25 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
 - Not significant alone at n=200; the point estimate is consistent with the deviation-count analysis (gain rises
   with deviations). Next: a looser gate (`predictor_gate_threshold 0.45`, roughly the validation median) on the same
   openings to map gain vs cost, queued after `lc0_long_n200_line1exact`; then more games on the best point.
+
+## 2026-10-23 00:05 — Depth-1 exact: +3.5 vs control; the gain-vs-cost curve so far (200 paired games each, same openings)
+
+- `experiments/lc0_long_n200_line1exact` (one victim search per certified candidate, Stockfish eval after the
+  predicted reply, min_gain 50): **75.0%** vs lc0@200 (104W 92D 4L). Paired: **+3.5 vs control (SE 2.5, [−1.4, +8.4])**,
+  −2.0 vs the 2-ply tree [−6.3, +2.3], −0.2 vs the gated tree [−5.2, +4.7]. Clean run. Deviations on 2.3% of moves,
+  median certified cost 0 cp; realised next-eval change after a deviation **+54.8 vs +9.8** baseline. Cost 1,286 ms per
+  move (71× the control): the exact model dominates even at depth 1 (~3 victim searches + reply evals).
+- Curve so far, all vs the same control on the same 200 openings:
+
+  | seed | paired gain | ms/move | × control |
+  |---|---|---|---|
+  | 2-ply exact tree (width 2) | +5.5 | 4,246 | 236× |
+  | depth-1 exact | +3.5 | 1,286 | 71× |
+  | predictor-gated 2-ply tree (gate 0.635) | +3.8 | 738 | 41× |
+  | predictor-only steering | +0.0 | 37 | 2× |
+  | control | 0 | 18 | 1× |
+
+  Reading: about two-thirds of the gain is available from the first ply of exact prediction, and the predictor gate
+  gets the same two-thirds at 60% of depth-1's cost. The second ply of the tree adds the remaining third at 6× the
+  cost. Nothing beats Stockfish at equal wall-clock on this hardware; on a GPU where an lc0@200 search is ~15 ms,
+  the gated tree would be ~50 ms per move. `lc0_long_n200_predgate45` (looser gate) running since 00:04.
