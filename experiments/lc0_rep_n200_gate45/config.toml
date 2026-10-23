@@ -1,0 +1,35 @@
+# REPLICATION of the predictor-gated tree (gate 0.45) on FRESH openings (srand 20261023), 200 rounds x 2 = 400 games vs
+# lc0 T1@200. On the first 200 openings it scored +5.0 [+0.1,+9.9] vs the control at 85x its cost (the full tree: +5.5 at 236x).
+# Pair with lc0_rep_n200_control2 (same srand) by Round.
+rounds = 200
+games = 2
+concurrency = 5
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261023
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-pred-gate45"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_pred_gate45.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1-n200"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n200"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 200
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1

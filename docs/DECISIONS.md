@@ -435,3 +435,16 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   gets the same two-thirds at 60% of depth-1's cost. The second ply of the tree adds the remaining third at 6× the
   cost. Nothing beats Stockfish at equal wall-clock on this hardware; on a GPU where an lc0@200 search is ~15 ms,
   the gated tree would be ~50 ms per move. `lc0_long_n200_predgate45` (looser gate) running since 00:04.
+
+## 2026-10-23 01:34 — Looser gate (0.45): +5.0 vs control, the full tree's gain at 36% of its cost
+
+- `experiments/lc0_long_n200_predgate45`: **76.5%** vs lc0@200 (115W 76D 9L). Paired on the same openings: **+5.0 vs
+  control (SE 2.5, 95% [+0.1, +9.9])**, −0.5 vs the full 2-ply tree [−4.9, +3.9], +1.2 vs the tight gate [−3.7, +6.2].
+  Clean run. Gate opened on 25% of multi-candidate positions; deviations on 1.45% of moves (tree: 3.1%); **1,535 ms per
+  move** (85× the control; the tree 236×).
+- Curve (same 200 openings, paired vs the same control): tree2 +5.5 @236× · gate0.45 +5.0 @85× · gate0.635 +3.8
+  @41× · depth-1 +3.5 @71× · predictor-only 0.0 @2×. Half of the tree's deviations carry essentially all of its gain,
+  and the predictor finds them. Best gain-per-cost point near the full gain: **gate 0.45**.
+- Decision: run gate 0.45 vs control long on fresh openings (`experiments/lc0_rep_n200_gate45`, `lc0_rep_n200_control2`,
+  `srand 20261023`, 400 games each) to replace the 200-game estimate and test transfer to new openings; ~4 h, overnight.
+  Shadow-seed side-effect control still pending (machine time).
