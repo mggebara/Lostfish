@@ -85,6 +85,13 @@ class SteeringPlayer:
         if tolerance_cp is not None:
             cfg = _override(cfg, "certify", "tolerance_cp", int(tolerance_cp))
         self.cfg = cfg
+        self.predictor = None
+        self._predictor_mode = str(knob(cfg, "steer", "predictor_mode", "gate"))
+        predictor_path = knob(cfg, "steer", "predictor_path", None)
+        if predictor_path:
+            from lostfish.predictor import VictimErrorPredictor
+
+            self.predictor = VictimErrorPredictor(str(predictor_path))
         self._extract = extract
         self._profile_loader = profile_loader
         if engine_factory is None:
@@ -185,9 +192,15 @@ class SteeringPlayer:
                 move = certified.best.move
                 record.update(reason="fallback_best", deadline_hit=True)
             else:
-                move, scored = self._steer(
-                    board, certified, budget, depth, deadline, record, timings
-                )
+                risky = self._predict_risk(board, certified, record, timings)
+                if risky is False:  # predictor gate: nothing worth the exact tree here
+                    move, record["reason"] = certified.best.move, "gate_skip"
+                elif risky is True and self._predictor_mode == "steer":
+                    move, record["reason"] = self._steer_by_risk(certified, record)
+                else:
+                    move, scored = self._steer(
+                        board, certified, budget, depth, deadline, record, timings
+                    )
         except Exception as exc:  # noqa: BLE001 - always answer with a legal move
             record["reason"] = "error"
             record["error"] = f"{type(exc).__name__}: {exc}"
@@ -213,6 +226,51 @@ class SteeringPlayer:
         return move, record
 
     # ---------------------------------------------------------------- helpers
+
+    def _predict_risk(
+        self,
+        board: chess.Board,
+        certified: Certified,
+        record: dict[str, Any],
+        timings: dict[str, float],
+    ) -> bool | None:
+        """Score each certified candidate's child position with the victim-error predictor.
+
+        Returns None without a predictor; otherwise True when the position is worth steering
+        (gate mode: max risk >= threshold; steer mode: always) and False when it is not.
+        """
+        if self.predictor is None:
+            return None
+        t = time.perf_counter()
+        children = []
+        for cand in certified.candidates:
+            child = board.copy(stack=False)
+            child.push(cand.move)
+            children.append(child)
+        risks = self.predictor.risk(children)
+        timings["predictor"] = _ms(t)
+        record["risk"] = {
+            c.move.uci(): round(r, 3) for c, r in zip(certified.candidates, risks, strict=True)
+        }
+        if self._predictor_mode == "steer":
+            return True
+        threshold = float(knob(self.cfg, "steer", "predictor_gate_threshold", 0.5))
+        return max(risks) >= threshold
+
+    def _steer_by_risk(
+        self, certified: Certified, record: dict[str, Any]
+    ) -> tuple[chess.Move, str]:
+        """Predictor-only steering: expected eval = cp + gain * P(victim blunders after this move)."""
+        gain = float(knob(self.cfg, "steer", "predictor_gain_cp", 300.0))
+        min_gain = float(knob(self.cfg, "steer", "min_gain_cp", 0.0))
+        risk = record.get("risk") or {}
+        scores = {c.move: c.cp + gain * risk.get(c.move.uci(), 0.0) for c in certified.candidates}
+        best = certified.best.move
+        pick = max(scores, key=lambda m: scores[m])
+        record["predictor_scores"] = {m.uci(): round(v, 1) for m, v in scores.items()}
+        if pick != best and scores[pick] - scores[best] >= min_gain:
+            return pick, "steer_pred"
+        return best, "steer_pred_hold"
 
     def _steer(
         self,
