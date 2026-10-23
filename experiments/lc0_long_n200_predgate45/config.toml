@@ -1,0 +1,36 @@
+# Step 3a, looser gate: exact tree runs when a certified candidate's child position has predicted risk >= 0.45 (about the
+# validation median; the 0.635 gate opened on 10% of multi-candidate positions and kept +3.8 of the tree's +5.5 at 17% cost).
+# Same openings (srand 20261021) as lc0_long_n200_{control,tree2,predgate}: pair by Round.
+# Question: the gain-vs-cost curve between the tight gate and the full tree.
+rounds = 100
+games = 2
+concurrency = 5
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261021
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-pred-gate45"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_pred_gate45.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1-n200"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n200"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 200
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1

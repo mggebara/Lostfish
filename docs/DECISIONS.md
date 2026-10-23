@@ -400,3 +400,16 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   variance of the AUC estimate (0.692 on the earlier split vs 0.643 here, ±0.03). Lesson: early stopping (best
   checkpoint is already what we save) and stronger regularisation; more data matters more than epochs — generate
   on the GPU box. The 30-epoch c128b8 checkpoint (0.692) stays deployed in the gate experiment.
+
+## 2026-10-22 22:53 — Step 3a, predictor-gated exact tree: +3.8 vs control at 17% of the tree's cost (200 paired games)
+
+- `experiments/lc0_long_n200_predgate` (exact tree runs only when the predictor rates a candidate's child position
+  ≥ 0.635 risk; otherwise Stockfish's best): **75.2%** vs lc0@200 (112W 77D 11L). Paired on the same openings:
+  **+3.8 vs control (SE 2.7, 95% [−1.5, +9.0])**, **−1.8 vs the full tree [−6.3, +2.8]**. Clean run.
+- Telemetry (11.2k moves): the gate opened on 10.0% of multi-candidate positions (601), deviations on 0.97% of
+  moves (109; the full tree: 3.1%). Cost **738 ms/move** (control 18, full tree 4,246): 17% of the tree's compute
+  kept ~70% of its point estimate, and the gated deviations were worth ~3.5 points per 100 vs ~1.6 for the tree's
+  unfiltered ones — the predictor picks the deviations that matter, even though it cannot pick the move itself.
+- Not significant alone at n=200; the point estimate is consistent with the deviation-count analysis (gain rises
+  with deviations). Next: a looser gate (`predictor_gate_threshold 0.45`, roughly the validation median) on the same
+  openings to map gain vs cost, queued after `lc0_long_n200_line1exact`; then more games on the best point.
