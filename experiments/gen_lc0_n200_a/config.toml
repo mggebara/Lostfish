@@ -1,0 +1,35 @@
+# DATA GENERATION (learning plan step 1, DECISIONS 2026-10-22 07:41): v2 control (Stockfish-equivalent, 20k nodes) vs the
+# victim lc0 T1 @200 nodes, 300 rounds x 2 = 600 games with random openings (srand 20261101). The victim's moves are then
+# labelled with Stockfish loss by mining/victim_errors.py. Not an experiment: no comparison is made.
+rounds = 300
+games = 2
+concurrency = 3
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261101
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-tol0"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_tol0.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n200"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 200
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1
