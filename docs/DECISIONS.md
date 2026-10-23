@@ -380,3 +380,18 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   import (engine runs without torch when `steer.predictor_path` is unset) — a deliberate exception to "torch is
   training-only", for the experiment. Also queued: retrain 128×8 for 60 epochs on all data once labelling pass 2
   (600 generated games) lands.
+
+## 2026-10-22 21:52 — Step 3b, predictor-only steering: exactly 0.0 vs the control (200 paired games)
+
+- `experiments/lc0_long_n200_predsteer` (certified candidates scored cp + 300·P(victim blunders after the move),
+  deviate when ≥ 20 cp better than Stockfish's best; predictor = victim_error_v1 128×8, AUC 0.69): **71.5%** vs lc0@200
+  (92W 102D 6L), control on the same openings 71.5% → paired **+0.0 (SE 2.6, 95% [−5.1, +5.1])**; vs the exact tree
+  on the same openings **−5.5 [−10.6, −0.4]**. Clean run (0 time losses / illegal / crashes).
+- Telemetry: deviated on 8.9% of moves (960) at a median certified cost of −2 cp (max 29); 37 ms per move, the
+  predictor 6 ms of it. Max predicted risk among the K=3 children had median 0.41: the three near-equal moves lead to
+  near-identical positions, so a position-level blunder predictor barely separates them.
+- Reading: the learned position-risk signal alone does not steer; the exact model's +5.8 comes from knowing the
+  victim's specific reply, not from the general riskiness of the position. Remaining uses of the predictor: as a
+  **gate** on when to spend the exact tree (`lc0_long_n200_predgate`, running), and as a feature later. Next cheap
+  test of where the exact gain lives: **depth-1 exact** (one victim search per candidate, ~3 per move ≈ 12× the
+  control instead of 230×): `experiments/lc0_long_n200_line1exact`, queued after the gate match.
