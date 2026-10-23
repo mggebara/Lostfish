@@ -485,3 +485,10 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   100) as a proxy for lc0@200 — if its bestmove agrees ≥ 90% (the victim's own self-agreement on repeated positions is
   94%), most of the +5.8 may survive at a fraction of the cost; measurement started; (C) shadow-seed side-effect
   control; (D) pause steering work here until the GPU box.
+- Addendum 08:05 — option (B) measured on 400 labelled positions: lc0 at fewer nodes vs the move the lc0@200 victim
+  actually played — @25: 73.8% agreement (401 ms/search), @50: 77.2% (560 ms), @100: 82.2% (814 ms), @200 itself:
+  86.5% (1,313 ms). Two findings: (1) the "exact" model is ~87% exact against the victim's in-game move (the victim's
+  own game state and Lc0 nondeterminism account for the rest), so the cheaper proxies lose 5–13 points of agreement
+  for little saving; (2) on Metal the cost is dominated by a ~350 ms fixed overhead per search, not by nodes — worth
+  checking in `Lc0PolicyProxy.root_policy` (a per-call `ucinewgame`/cache clear would explain it). **Option B is
+  not promising as a model change**; the overhead, if removable, is a 2–3× speed-up of the exact tree here.
