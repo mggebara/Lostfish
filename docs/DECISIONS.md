@@ -334,3 +334,21 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   (b) `nohup scripts/run_queue.sh experiments/lc0_rep_n200_control > logs/queue_rep.log 2>&1 &`, then pair with
   `lc0_rep_n200_tree2/games.pgn` by Round (snippet in DECISIONS 2026-10-22 01:49 entry's analysis: load by Round+colour);
   (c) start step 1 (write `mining/victim_errors.py`: generate + label) once the control match frees the machine.
+
+## 2026-10-22 19:04 — Replication holds: exact-model victim-play tree is +5.8 ± 1.6 over the Stockfish-equivalent control (555 paired games)
+
+- Replication on fresh openings (`srand 20261022`), vs lc0 T1@200, both at fixed nodes (ours 20k): `lc0_rep_n200_tree2`
+  355 games (stopped for the shutdown) **74.9%** (191W 150D 14L) vs `lc0_rep_n200_control` **69.0%** on the same 355
+  openings (control's full 400: 171W 207D 22L). Paired: **+5.9, SE 2.1, 95% [+1.9, +10.0]**; tree2 better in 112
+  openings, worse in 69.
+- Combined with last night's 200 paired games (+5.5): **n=555, +5.8, SE 1.6, 95% [+2.7, +8.9], z=3.6** (p≈0.0003
+  two-sided). Against this victim that is roughly +55 Elo over Stockfish at the same node budget.
+- What is established: a Stockfish-certified move choice (never outside tolerance of Stockfish's best, median
+  certified cost 0 cp) that uses the victim's own search as the opponent model beats Stockfish at equal nodes
+  against that victim. This is the Phase 5 claim (victim exploitable at fixed nodes), replicated. The Phase 2 claim
+  (beating Stockfish at equal wall-clock against general opponents) remains closed as negative: the gain costs ~230×
+  compute per move because the exact model is the victim engine itself.
+- Next (per the learning plan agreed this morning): (1) where the gain comes from — telemetry join of deviations to
+  game outcomes; (2) cut the cost — the supervised victim-error predictor (labelling running: `logs/label.log`,
+  data generation `experiments/gen_lc0_n200_a`); (3) the curve: is the margin larger or smaller at victim@800
+  (needs the GPU box for the exact model at 800 nodes)?
