@@ -492,3 +492,6 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   for little saving; (2) on Metal the cost is dominated by a ~350 ms fixed overhead per search, not by nodes — worth
   checking in `Lc0PolicyProxy.root_policy` (a per-call `ucinewgame`/cache clear would explain it). **Option B is
   not promising as a model change**; the overhead, if removable, is a 2–3× speed-up of the exact tree here.
+- Addendum 08:10 — overhead checked: `Lc0PolicyProxy.root_policy` issues no per-call `ucinewgame`; the cost is per
+  GPU dispatch on Metal with Threads=1 (≈ 5–15 ms per node evaluation, 25 nodes ≈ 400 ms, 200 nodes ≈ 1.3 s under
+  light load). Inherent to the backend, nothing to fix in our code; the CUDA box removes it.
