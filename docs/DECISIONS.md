@@ -495,3 +495,12 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
 - Addendum 08:10 — overhead checked: `Lc0PolicyProxy.root_policy` issues no per-call `ucinewgame`; the cost is per
   GPU dispatch on Metal with Threads=1 (≈ 5–15 ms per node evaluation, 25 nodes ≈ 400 ms, 200 nodes ≈ 1.3 s under
   light load). Inherent to the backend, nothing to fix in our code; the CUDA box removes it.
+
+## 2026-10-23 08:45 — Paused for a machine shutdown (GPU box expected tonight)
+
+- Nothing running. Bot stopped on SIGINT mid-game (a few minutes' notice; one game likely forfeited on time). Lichess
+  since 10-22 18:12: 111 games, 43W 68D 0L.
+- State: exact 2-ply tree **+5.8 ± 1.6** (555 paired games) stands; predictor-in-engine closed (TIME WILL NOT HELP);
+  option (B) fewer-node proxy not promising; options (A) GPU box / (C) shadow-seed control / (D) pause are Matthew's call.
+- Resume here: `nohup scripts/run_lichess_bot.sh > logs/lichess-bot.log 2>&1 &` (once). Optional idle-time job:
+  shadow-seed control (tree2 with `min_gain_cp: 100000` vs the control on matched openings). GPU box: `docs/GPU_BOX.md`.
