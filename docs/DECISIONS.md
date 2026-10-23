@@ -395,3 +395,8 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   **gate** on when to spend the exact tree (`lc0_long_n200_predgate`, running), and as a feature later. Next cheap
   test of where the exact gain lives: **depth-1 exact** (one victim search per candidate, ~3 per move ≈ 12× the
   control instead of 230×): `experiments/lc0_long_n200_line1exact`, queued after the gate match.
+- Addendum 22:27 — 60-epoch retrain of 128×8 on all 159k labels (118k distinct positions): **overfits** — val AUC
+  peaks 0.643 at epoch 29, then falls to 0.57 by epoch 60 while train loss drops to 0.37. Also shows split-to-split
+  variance of the AUC estimate (0.692 on the earlier split vs 0.643 here, ±0.03). Lesson: early stopping (best
+  checkpoint is already what we save) and stronger regularisation; more data matters more than epochs — generate
+  on the GPU box. The 30-epoch c128b8 checkpoint (0.692) stays deployed in the gate experiment.
