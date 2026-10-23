@@ -360,3 +360,23 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   overall +5.8. A clean side-effect control would be a "shadow" seed (tree2 doing all its searches with
   `min_gain_cp 100000`, never deviating) vs the control: 0.0 expected if the extra searches have no hidden tax
   (hash/time effects). Planned, not queued tonight (machine busy with data generation + labelling).
+
+## 2026-10-22 21:05 — Victim-error predictor v1: lc0@200's blunders are predictable from the board (AUC 0.69, ×3 lift), and are victim-specific
+
+- `experiments/victim_error_v1/RESULT.md`. 118k labelled victim moves (Stockfish 100k-node labels, blunder = expected
+  score drop ≥ 0.10, 1.6% of moves), 89.5k distinct positions, split by game. **ResNet 128×8: val AUC 0.692**; 64×6:
+  0.685. Lift: the top 5% of positions by predicted risk blunder 5.1% of the time vs 1.6% base (×3.2); top 1% ×5.7.
+- **Baselines at chance:** depth-10 Stockfish's loss on the same position has AUC 0.505 — where Lc0 errs is not
+  where a conventional searcher errs. Lopsidedness |cp| 0.554. So the error structure is the victim's own, which is
+  the premise of the learning direction. Errors concentrate in the middlegame (17–24 pieces: 3% rate; endgames <1%).
+- Protocol lesson (recorded for Phase 3 too): deterministic engines replay identical games from shared openings →
+  24% exact-duplicate positions; a plain game split leaked a third of validation positions into training (the victim
+  repeats its move 94% of the time), inflating AUC 0.65 → 0.67 (0.73 on leaked rows). Dedupe by FEN before splitting.
+- Decision — step 3 (steer by predicted error), two seeds vs lc0@200 against the control on matched openings:
+  (a) **predictor-gated exact tree**: run the 230×-cost tree only when the predictor says a certified candidate's
+  child position is high-risk (threshold ≈ top 15%); expected to keep most of the +5.8 at a fraction of the cost;
+  (b) **predictor-only steering**: expected eval = cp + 300·p_blunder(child), existing `_choose` gate (min_gain 20),
+  ~2 ms/move; tests whether the learned signal alone steers. Inference: torch on CPU inside the engine, optional
+  import (engine runs without torch when `steer.predictor_path` is unset) — a deliberate exception to "torch is
+  training-only", for the experiment. Also queued: retrain 128×8 for 60 epochs on all data once labelling pass 2
+  (600 generated games) lands.
