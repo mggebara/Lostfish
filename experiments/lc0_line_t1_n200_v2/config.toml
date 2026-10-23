@@ -62,7 +62,7 @@ SyzygyPath = "{root}/tb/syzygy"
 
 [[engine]]
 name = "lc0-t1-n200"
-cmd = "/opt/homebrew/bin/lc0"
+cmd = "engines/lc0"
 nodes = 200
 [engine.options]
 WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"

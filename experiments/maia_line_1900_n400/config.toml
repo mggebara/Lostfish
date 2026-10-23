@@ -61,7 +61,7 @@ SyzygyPath = "{root}/tb/syzygy"
 
 [[engine]]
 name = "maia-1900-n400"
-cmd = "/opt/homebrew/bin/lc0"
+cmd = "engines/lc0"
 nodes = 400
 [engine.options]
 WeightsFile = "{root}/engines/maia/maia-1900.pb.gz"
