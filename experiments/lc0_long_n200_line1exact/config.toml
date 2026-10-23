@@ -1,0 +1,36 @@
+# Where does the exact-model gain live? DEPTH-1 exact: one victim search (lc0@200, the victim itself) per certified
+# candidate, Stockfish eval after the predicted reply, min_gain 50 (variant v2_line1_g50 + profile lc0-t1-n200). About 3
+# victim searches per move (~12x the control) instead of ~15 for the depth-2/width-2 tree (~230x).
+# Same openings (srand 20261021) as lc0_long_n200_{control,tree2,predgate,predsteer}: pair by Round.
+rounds = 100
+games = 2
+concurrency = 5
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261021
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-line1-exact"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_line1_g50.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t1-n200"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n200"
+cmd = "/opt/homebrew/bin/lc0"
+nodes = 200
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1
