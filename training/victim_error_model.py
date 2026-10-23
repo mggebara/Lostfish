@@ -153,7 +153,9 @@ def _log(msg: str) -> None:
 
 
 def split_by_game(df: pd.DataFrame, val_frac: float, seed: int) -> tuple[np.ndarray, np.ndarray]:
-    games = df["game_id"].unique()
+    games = np.array(
+        sorted(df["game_id"].unique()), dtype=object
+    )  # plain ndarray: Arrow arrays mis-shuffle
     rng = np.random.default_rng(seed)
     rng.shuffle(games)
     n_val = max(1, int(len(games) * val_frac))
@@ -192,6 +194,11 @@ def main(argv: list[str] | None = None) -> int:
         & df["best"].notna()
         & (df["cp_best"].abs() <= args.max_abs_cp)
     ].reset_index(drop=True)
+    n_before = len(df)
+    # Deterministic engines replay identical games from shared openings: the same FEN occurs in many games.
+    # Keep one row per position so no position can sit in both train and validation.
+    df = df.drop_duplicates(subset=["fen"], keep="first").reset_index(drop=True)
+    _log(f"deduplicated positions: {n_before} -> {len(df)}")
     if args.max_rows and len(df) > args.max_rows:
         df = df.sample(args.max_rows, random_state=args.seed).reset_index(drop=True)
     tr, va = split_by_game(df, args.val_frac, args.seed)
