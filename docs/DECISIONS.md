@@ -352,3 +352,11 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   game outcomes; (2) cut the cost — the supervised victim-error predictor (labelling running: `logs/label.log`,
   data generation `experiments/gen_lc0_n200_a`); (3) the curve: is the margin larger or smaller at victim@800
   (needs the GPU box for the exact model at 800 nodes)?
+- Addendum 19:10 — where the gain sits (telemetry deviations joined to the 555 paired games by FEN; 883/887 matched):
+  paired diff by number of deviations in the tree2 game — 0: **−8.1** (n=172, SE 3.0); 1: +2.7 (149); 2: +14.9 (104);
+  3: +19.5 (59); 4+: +21.1 (71). Monotone, but NOT clean causal evidence: a deviation happens exactly when the exact
+  model predicts the victim is about to err, so "0 deviations" selects games the victim played well (hence the
+  negative group) — selection on the victim's play, not an effect of not deviating. The unbiased number stays the
+  overall +5.8. A clean side-effect control would be a "shadow" seed (tree2 doing all its searches with
+  `min_gain_cp 100000`, never deviating) vs the control: 0.0 expected if the extra searches have no hidden tax
+  (hash/time effects). Planned, not queued tonight (machine busy with data generation + labelling).
