@@ -5,6 +5,24 @@ M1 Pro (Metal) one lc0@200 search is ~0.7 s, so the winning seed costs 4.2 s/mov
 it is ~10–20 ms, which makes the same seed a playable rapid-game engine and lets us test stronger victims.
 Context: `docs/DECISIONS.md` 2026-10-22/23 (exact tree +5.8 ± 1.6 over 555 paired games; predictor-in-engine closed).
 
+## 0. Windows box: use WSL2, not native Windows
+
+The repo's scripts are bash (`scripts/*.sh`, the `scripts/lostfish` wrapper) and the setup script targets Linux/macOS, so on
+a Windows machine run everything inside **WSL2 Ubuntu** (22.04 or 24.04) with CUDA passthrough:
+
+1. Windows side: current NVIDIA Game Ready/Studio driver (it includes WSL CUDA support; do **not** install a Linux
+   driver inside WSL). `wsl --install -d Ubuntu-24.04`, then inside Ubuntu: `sudo apt update && sudo apt install -y
+   build-essential git python3.11-venv rsync`.
+2. CUDA toolkit for WSL inside Ubuntu, per NVIDIA's "CUDA on WSL" guide (the `cuda-toolkit` package from the
+   `wsl-ubuntu` repo, not the `cuda` metapackage). Check `nvidia-smi` works inside WSL.
+3. Keep the repo on the Linux filesystem (`~/dev/LostFish`), not under `/mnt/c` (file I/O there is 10× slower; fastchess
+   writes PGNs and logs constantly).
+4. Run Claude Code inside WSL (the Ubuntu terminal), so paths and tools are the Linux ones below.
+5. Lc0: the Linux CUDA release build works inside WSL2 (needs the CUDA runtime from step 2; the `cudnn` build also needs
+   cuDNN). Alternative if it misbehaves: the Windows `lc0.exe` CUDA build can be called from WSL via interop, but then
+   `engines/lc0` must be a tiny wrapper script that execs it, and paths passed to it must be Windows paths — avoid unless needed.
+Everything from section 1 onward then applies as written.
+
 ## 1. Setup (Linux x86_64 + NVIDIA)
 
 1. Driver + CUDA: `nvidia-smi` must work (driver ≥ 550; CUDA 12.x runtime).
