@@ -581,3 +581,7 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   numbers and the BT4 match follow). The T3@1000 point (`experiments/lc0_t3_n1000_{control,tree2}`, profile
   `lc0-t3-n1000`, same openings as its Stockfish match) is queued after the n800 replication (`~/after_night.sh`, starts
   when the BT4 match finishes; the labelling is CPU-only and runs alongside).
+- Addendum 01:10 — `lc0_t3_n1000_stockfish` final (400 games, clean, 34 min at concurrency 4): Stockfish@20k **30.5%**
+  (7W 230D 163L), pentanomial [28, 104, 64, 4, 0] → SE ≈ 1.2 (≈ −140 Elo); by colour 34.5% / 26.5%. The victim
+  ladder vs Stockfish@20k: T1@200 ≈ 30% for the victim, T1@800 ≈ 49%, T3@1000 ≈ 70%. The T3@1000 point stays queued
+  (control ~1 h, tree ~1 day at 200 rounds: ~10 s per steered move); shorten it if a day of GPU is too much.
