@@ -608,3 +608,16 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   control; deviations 1.8–2.0% of moves (387 and 432 of ~21.7k). Not a wall-clock engine; the Phase 5 fixed-nodes claim only.
 - Next on the curve: T3-512x15@1000, the victim that beats Stockfish@20k (30.5%). `lc0_t3_n1000_control` running
   (fastchess queue), `lc0_t3_n1000_tree2` follows (~10 s per steered move → ~1 day at 200 rounds; Matthew may cut it).
+
+## 2026-10-26 04:10 — Labels at scale: 264k victim moves from 5,000 games (3.0% blunders ≥ 100 cp, 0.02% duplicate FENs); control vs T3@1000 = 31.6%
+
+- `mining/victim_errors.py` over `gen_lc0_n200_gpu_a` (4 workers, Stockfish 100k-node labels, depth-10 baseline): 3h32,
+  **264,127 rows → `data/victim_errors/lc0-t1-n200_gpu_a.parquet`** (8.8 MB; `data/` stays untracked). Victim loss
+  ≥ 100 cp on **3.03%** of moves (mean clipped loss 15.4 cp); the depth-10 Stockfish baseline loses ≥ 100 cp on 1.28%
+  of the same positions. Distinct FENs 264,066 of 264,127: a single run on 2,500 distinct openings has essentially no
+  duplicates (the Mac's 24% came from several experiments sharing openings). Still dedupe across files when merging
+  with the Mac's 160k rows. Retraining the predictor (torch not installed here yet) is not in this session's scope;
+  the data is ready for it and for the Phase 5a blind-spot analysis.
+- `lc0_t3_n1000_control` (v2 tol0 @20k vs T3-512x15@1000, same openings as its Stockfish match; clean, 400 games):
+  **31.6%** (10W 233D 157L); paired vs Stockfish@20k (30.5%) **+1.1 (SE 1.2)** — the controls are equivalent against
+  T3 as well. `lc0_t3_n1000_tree2` started 04:04 at concurrency 3 (6 T3 processes, ~5.3 GB VRAM).
