@@ -1,0 +1,36 @@
+# Exploitability point 3 (GPU box, docs/GPU_BOX.md job 2): victim lc0 T1 @800 nodes. One 2-engine match per seed, all three
+# matches share srand/openings so rounds pair across matches: .venv/bin/python scripts/pair_matches.py <A> <B> --opponent lc0
+# 200 rounds x 2 = 400 games each.
+# Seed: plain Stockfish 19 at 20k nodes (ceiling check: is Stockfish@20k below 50% against this victim?).
+rounds = 200
+games = 2
+concurrency = 6
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261025
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "Stockfish"
+cmd = "engines/stockfish"
+nodes = 20000
+[engine.options]
+Threads = 1
+BackendOptions = "max_batch=256"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n800"
+cmd = "engines/lc0"
+nodes = 800
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1
+BackendOptions = "max_batch=256"
