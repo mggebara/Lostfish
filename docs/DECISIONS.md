@@ -533,3 +533,14 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   victim lc0 T1@800 with BackendOptions max_batch=256; the control runs Profile `_generic`, which cannot change its
   moves since it never deviates, and saves one lc0 per game). Queue order Stockfish → control → tree2. Pushing to main
   is blocked until this machine gets GitHub credentials.
+
+## 2026-10-25 21:05 — Ceiling check at victim@800: Stockfish@20k scores 51.4% vs lc0 T1@800 (parity; exploitation regime reached)
+
+- `experiments/lc0_n800_stockfish` (plain Stockfish 19 @20k vs lc0 T1@800, 200 rounds × 2, srand 20261025, Syzygy 5,
+  clean: 0 time losses / illegal / crashes; 13 min wall at concurrency 6): **51.4%** (74W 263D 63L), pentanomial
+  [7, 28, 116, 45, 4] → SE ≈ 1.4, 95% ≈ [48.7, 54.0]. By colour 54.2% / 48.5% (W/B); decisive games average 140 plies.
+- Against lc0@200 the Stockfish-equivalent control scored ~70%; at 800 nodes the victim is at parity with Stockfish@20k.
+  GPU_BOX job 2's ceiling condition ("below 50%") is met within noise: from here a paired gain of the tree over the
+  control measures exploitation headroom, not faster conversion of a won position.
+- Next in the queue: `lc0_n800_control` (running), then `lc0_n800_tree2` (~4 h at concurrency 4). Pair with
+  `scripts/pair_matches.py` when both are in.
