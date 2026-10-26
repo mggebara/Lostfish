@@ -544,3 +544,7 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   control measures exploitation headroom, not faster conversion of a won position.
 - Next in the queue: `lc0_n800_control` (running), then `lc0_n800_tree2` (~4 h at concurrency 4). Pair with
   `scripts/pair_matches.py` when both are in.
+- Addendum 21:16 — `lc0_n800_control` (v2 tol0 @20k, Profile `_generic`, vs lc0 T1@800, same openings; clean, 13 min):
+  **51.6%** (77W 259D 64L), pentanomial [3, 37, 110, 44, 6]. Paired vs the Stockfish match: **+0.2 (SE 1.4, 95% [−2.6,
+  +3.1])**, better in 43 rounds / worse in 43 / same in 114 — the two controls are equivalent at 800 nodes as at 200.
+  By colour 57.8% / 45.5%. `lc0_n800_tree2` started 21:16 (concurrency 4; 8 lc0 processes, 7.2 GB of 8 GB VRAM, GPU 99%).
