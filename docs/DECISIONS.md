@@ -590,3 +590,21 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   stronger than T3@1000 (30.5 ± 1.2) against Stockfish@20k at ~2× the search cost (1,169 vs 879 MiB VRAM, ~2.4 vs ~1.2 s
   per 1,000-node search under load), so **T3-512x15@1000 is the stronger victim for the next point**; BT4 is parked.
   GPU queue (`~/after_night.sh`) now on `lc0_rep_n800_control` → `lc0_rep_n800_tree2` → `lc0_t3_n1000_control` → `lc0_t3_n1000_tree2`.
+
+## 2026-10-26 03:45 — n800 replication holds: +6.4 on fresh openings; combined exact tree +5.7 ± 1.4 over the control at victim@800 (800 paired games)
+
+- `experiments/lc0_rep_n800_tree2` vs `lc0_rep_n800_control` (fresh openings, srand 20261027, 200 rounds × 2 each,
+  victim lc0 T1@800; both clean, 1h49 and 13 min): tree **57.2%** (101W 256D 43L, pentanomial [1, 25, 99, 65, 10]) vs
+  control **50.9%** (76W 255D 69L). Paired **+6.4 (SE 2.1, 95% [+2.4, +10.4], z=3.11)**, better in 81 rounds / worse in
+  48 / same in 71. By colour: tree 62.8% / 51.8%, control 55.0% / 46.8%.
+- Combined with the first set (srand 20261025, +5.0 ± 1.9): **n = 400 rounds (800 games), +5.7 (SE 1.4, 95% [+3.0,
+  +8.4], z=4.10)**, p ≈ 4·10⁻⁵ two-sided. Two independent opening sets, both clear of zero.
+- The exploitability curve against lc0 T1, paired gain of the exact 2-ply tree over the Stockfish-equivalent control
+  at 20k nodes: **victim@200: +5.8 ± 1.6** (555 games; control ≈ 70%); **victim@800: +5.7 ± 1.4** (800 games; control
+  ≈ 51%). Flat. Four times the victim's search moved the control from winning to parity and left the exploitation
+  margin unchanged: what the tree extracts is not a share of a won position but a victim-specific error the victim's
+  own extra search does not remove at 800 nodes.
+- Cost at this point: ~1.1 s per move (1.8 s on multi-candidate positions) with four games sharing the GPU, ~50× the
+  control; deviations ~1.8% of moves. Not a wall-clock engine; the Phase 5 fixed-nodes claim only.
+- Next on the curve: T3-512x15@1000, the victim that beats Stockfish@20k (30.5%). `lc0_t3_n1000_control` running
+  (fastchess queue), `lc0_t3_n1000_tree2` follows (~10 s per steered move → ~1 day at 200 rounds; Matthew may cut it).
