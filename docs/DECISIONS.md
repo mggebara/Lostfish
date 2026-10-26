@@ -621,3 +621,36 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
 - `lc0_t3_n1000_control` (v2 tol0 @20k vs T3-512x15@1000, same openings as its Stockfish match; clean, 400 games):
   **31.6%** (10W 233D 157L); paired vs Stockfish@20k (30.5%) **+1.1 (SE 1.2)** — the controls are equivalent against
   T3 as well. `lc0_t3_n1000_tree2` started 04:04 at concurrency 3 (6 T3 processes, ~5.3 GB VRAM).
+
+## 2026-10-26 08:12 — pause (GPU box shutting down); docket
+
+**Change.** Paused `experiments/lc0_t3_n1000_tree2` (exact tree, Profile lc0-t3-n1000, vs T3@1000) at the
+08:10 autosave: fastchess was sent SIGINT two seconds after the autosave and rewrote `config.json` on exit, so
+the saved state is 296 of 400 games (W12 L97 D187 from the tree's side). `games.pgn` holds 313 games: the three
+in flight at the pause plus the 159–173 block replayed after the 05:57 Windows Update reboot appear twice by
+Round; take the last occurrence per (Round, colour) when pairing.
+
+**Resume.**
+`cd experiments/lc0_t3_n1000_tree2 && ../../engines/fastchess -config file=config.json >> run_resume.log 2>&1`
+(restarts at game 297; ~70 min at 1.5 games/min with concurrency 3). Then RESULT.md by hand, pair against
+`lc0_t3_n1000_control` and `lc0_t3_n1000_stockfish` with `scripts/pair_matches.py`, telemetry ms/move and
+deviation counts for `"lc0-t3-n1000"` lines, DECISIONS entry, delete `config.autosave-before-resume.json`.
+
+**Interim, unpaired, not a result.** Tree 35.6 % of 296 games vs T3@1000, against control 31.6 % and
+Stockfish@20k 30.5 % on the same openings. Direction matches the n800 points; the paired estimate waits
+for the full 400.
+
+**Docket after the T3 run (agreed with Matthew 2026-10-26).** Measure whether cheap raw-net labels predict the
+victim's real search blunders before any training run:
+1. `Lc0PolicyProxy(nodes=1)` (one batch per position, ~3 ms vs ~70 ms for the 200-node search) over all
+   264,127 FENs in `data/victim_errors/lc0-t1-n200_gpu_a.parquet`; report positions/s, agreement of the raw
+   top move with the move played at 200 nodes, and AUC + precision@3 % of (a) policy mass on Stockfish's best
+   move, (b) cp loss of the raw top move where the parquet gives it, (c) |raw Q − Stockfish eval| as
+   predictors of the blunder label, with 95 % intervals.
+2. If (1) carries signal: stream ~2 M positions from the Lichess evaluation database
+   (`lichess_db_eval.jsonl.zst`, depth ≥ 20, ≥ 2 PVs) and label them the same way, using the DB's PV evals as
+   the reference (exact cp loss when the raw top move is among the PVs, censored otherwise); compare blunder
+   rate and phase/material distribution with the on-policy rows.
+3. Only then a pretrain-on-cheap-labels / fine-tune-on-search-labels run, gated by a gauntlet against the
+   current predictor. Batched inference outside lc0 (leela2onnx export) only if the nodes=1 path proves useful
+   and too slow.
