@@ -1,0 +1,37 @@
+# DATA GENERATION at scale (docs/GPU_BOX.md job 3; DECISIONS 2026-10-25): v2 control (Stockfish-equivalent, 20k nodes) vs
+# the victim lc0 T1 @200 nodes, 2,500 rounds x 2 = 5,000 games, random openings (srand 20261026; the Mac's gen_lc0_n200_a
+# used 20261101). The victim's moves are then labelled by mining/victim_errors.py. Not an experiment: no comparison is made.
+# Control runs Profile _generic (it never deviates, so the proxy cannot change its moves; saves one lc0 per game).
+rounds = 2500
+games = 2
+concurrency = 6
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261026
+ratinginterval = 100
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-tol0"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_tol0.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "_generic"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n200"
+cmd = "engines/lc0"
+nodes = 200
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1
+BackendOptions = "max_batch=256"
