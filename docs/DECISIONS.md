@@ -548,3 +548,23 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   **51.6%** (77W 259D 64L), pentanomial [3, 37, 110, 44, 6]. Paired vs the Stockfish match: **+0.2 (SE 1.4, 95% [−2.6,
   +3.1])**, better in 43 rounds / worse in 43 / same in 114 — the two controls are equivalent at 800 nodes as at 200.
   By colour 57.8% / 45.5%. `lc0_n800_tree2` started 21:16 (concurrency 4; 8 lc0 processes, 7.2 GB of 8 GB VRAM, GPU 99%).
+
+## 2026-10-26 01:10 — Exploitability point at victim@800: exact tree +5.0 ± 1.9 over the control (400 paired games); the margin holds while the control falls to parity
+
+- `experiments/lc0_n800_tree2` (v2 + 2-ply victim-play tree, exact model lc0-t1-n800, 20k nodes, vs lc0 T1@800; same
+  200 openings as the two controls, srand 20261025; clean: 0 time losses / illegal / crashes; 1h49 at concurrency 4):
+  **56.6%** (93W 267D 40L), pentanomial [0, 30, 97, 63, 10]. By colour 62.0% / 51.2% (control 57.8% / 45.5%).
+- Paired by opening (`scripts/pair_matches.py`): **tree − control +5.0 (SE 1.9, 95% [+1.3, +8.7], z=2.67)**, better in 74
+  rounds / worse in 47 / same in 79; tree − Stockfish **+5.2 (SE 1.8, [+1.7, +8.8], z=2.90)**, 78 / 46 / 76.
+- The curve so far (paired gain of the exact tree over the Stockfish-equivalent control, same openings):
+  victim@200: +5.8 ± 1.6 (555 games, Mac, control ≈ 70%); victim@800: **+5.0 ± 1.9** (400 games, control 51.6%).
+  Making the victim 4× stronger moved the control from ~70% to parity with Stockfish@20k but did not shrink the
+  exploitation margin. At parity every point above 50% is exploitation, not faster conversion.
+- Telemetry (22.0k moves): 57% of positions had ≥ 2 certified candidates; **387 deviations = 1.76% of moves** (the n200
+  tree on the Mac: 3.1%); 1,058 ms per move mean, 791 median, 1,839 for multi-candidate positions, with four games
+  sharing the GPU (control ≈ 20 ms → ~50× compute per move here; 236× on the Mac at n200).
+- Caveats: one opening set, p ≈ 0.008 two-sided (same multiple-comparison warning as 2026-10-22); the fresh-openings
+  replication `lc0_rep_n800_{control,tree2}` (srand 20261027, 200 rounds × 2 each) is queued after tonight's data
+  generation and ceiling matches (`~/after_night.sh`). Combined with this set it gives n = 400 rounds, SE ≈ 1.3.
+- Decision: the exploitability curve is flat from 200 to 800 nodes against T1. Next on the curve: a stronger net
+  (T3-512x15 / BT4-1024x15 at 1,000 nodes), gated on Stockfish@20k's score against it (running tonight).
