@@ -22,7 +22,6 @@ cmd = "engines/stockfish"
 nodes = 20000
 [engine.options]
 Threads = 1
-BackendOptions = "max_batch=256"
 Hash = 64
 SyzygyPath = "{root}/tb/syzygy"
 
