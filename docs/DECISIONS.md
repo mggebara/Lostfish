@@ -504,3 +504,32 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   option (B) fewer-node proxy not promising; options (A) GPU box / (C) shadow-seed control / (D) pause are Matthew's call.
 - Resume here: `nohup scripts/run_lichess_bot.sh > logs/lichess-bot.log 2>&1 &` (once). Optional idle-time job:
   shadow-seed control (tree2 with `min_gain_cp: 100000` vs the control on matched openings). GPU box: `docs/GPU_BOX.md`.
+
+## 2026-10-25 20:50 — GPU box online (WSL2 Ubuntu 24.04, RTX 3070 Ti): exact tree 509 ms/move at n200, ~8× the Mac, not 28×; lc0 cost is per-search latency; VRAM caps concurrency
+
+- Setup (docs/GPU_BOX.md §0–1): Windows 11, WSL 3.0.3, Ubuntu-24.04 installed today (only docker-desktop existed), driver
+  610.74, hardware GPU scheduling already on. CUDA 12.9 `cuda-nvcc`/`cudart-dev`/`libcublas-dev` from NVIDIA's wsl-ubuntu
+  repo suffice; lc0 v0.32.1 built from source (the project ships no Linux binaries). Stockfish 19 (sf_19 renamed its
+  Linux assets to `*-universal.tar.gz`; `setup_engines.sh` fixed), fastchess 1.8.2-alpha, Syzygy 3-4-5, 8moves_v3,
+  the T1 net. `pytest -q`: 195 passed, 1 skipped. Python 3.12; torch not installed (jobs 1–4 do not need it).
+- lc0 T1-256x10, cuda-fp16, Threads=1: a fresh 200-node search ≈ **70 ms**, 800 nodes ≈ 112 ms (10-position benchmark
+  totals 691 / 1,161 ms; the Mac's Metal: ~1,300 ms at 200). Forward pass 2.0 ms at batch 1–8, 2.7 ms at 32, 7.1 ms at
+  128: a 200-node search is ~30 tiny batches, launch/sync-bound. No search knob moves it (Threads 2, MinibatchSize 8/32,
+  max-collision-events 32: all within ±5%); fp32 is 2× slower; the Windows-native lc0.exe cuda12 build is identical
+  (679 / 1,122 ms), so it is not a WSL artefact — the interop option in GPU_BOX §0.5 is dropped. Clocks 1,950 MHz.
+- Job 1 speed check (`scripts/speed_check.py`, five middlegame positions after warm-up, 20k nodes): tree2 + lc0-t1-n200
+  **median 509 ms, max 699 ms per move** (proxy 360–540 ms of it; single-candidate moves 25–30 ms); with lc0-t1-n800
+  median 840 ms, max 1,069 ms. Target ≤ 150 ms missed 3–5×; Mac 4,246 ms → ~8× faster. The remaining lever is running
+  the ~8–15 proxy searches per move in parallel lc0 processes (a steering-loop change that also alters tree reuse);
+  not needed for fixed-node matches, so not done.
+- VRAM: 1,271 MiB per lc0 process by default (cuda backend preallocates for max_batch 1024); `--backend-opts=
+  max_batch=256` → **747 MiB**, search unchanged (MinibatchSize stays 256). Applied by a wrapper at /usr/local/bin/lc0
+  (`engines/lc0` → it) for LostFish's proxy and explicitly as `BackendOptions` on the victim in the experiment configs.
+  Budget ≈ 8 lc0 processes on 8 GB (desktop uses ~1.1 GB): single-lc0 matches at concurrency 6, the tree match at 4.
+  GPU utilisation reads 100% at concurrency 6: the box delivers throughput, not per-move latency.
+- Mistakes recorded so they are not repeated: writing the wrapper through the `/usr/local/bin/lc0` symlink overwrote
+  the compiled binary (re-linked with ninja); `pkill -f 'bash -s'` kills the stdin script itself.
+- Decision: job 2 launched 20:49 — `experiments/lc0_n800_{stockfish,control,tree2}` (200 rounds × 2, srand 20261025,
+  victim lc0 T1@800 with BackendOptions max_batch=256; the control runs Profile `_generic`, which cannot change its
+  moves since it never deviates, and saves one lc0 per game). Queue order Stockfish → control → tree2. Pushing to main
+  is blocked until this machine gets GitHub credentials.

@@ -23,6 +23,15 @@ a Windows machine run everything inside **WSL2 Ubuntu** (22.04 or 24.04) with CU
    `engines/lc0` must be a tiny wrapper script that execs it, and paths passed to it must be Windows paths — avoid unless needed.
 Everything from section 1 onward then applies as written.
 
+What the first setup actually needed (2026-10-25, DECISIONS entry of that date): `wsl --install -d Ubuntu-24.04 --no-launch`
+plus a user in `/etc/wsl.conf`; the CUDA packages `cuda-nvcc-12-9 cuda-cudart-dev-12-9 libcublas-dev-12-9` (not the full
+toolkit); lc0 built from source (`./build.sh release -Dgtest=false -Dcudnn=false`, no Linux release binaries exist) and
+exposed through a wrapper `/usr/local/bin/lc0` that adds `--backend-opts=max_batch=256` (VRAM per lc0 process 1,271 →
+747 MiB; ~8 processes fit on 8 GB, so single-lc0 matches run at concurrency 6 and the tree match at 4). The Windows
+lc0.exe build has the same latency and VRAM, so skip the interop idea. Hardware-accelerated GPU scheduling was already on.
+Expectations corrected: a fresh 200-node search is ~70 ms (not 10–20), bounded by ~2 ms per tiny batch; the exact
+tree runs at ~0.5 s per move (job 1 target of 150 ms missed), and throughput comes from concurrency.
+
 ## 1. Setup (Linux x86_64 + NVIDIA)
 
 1. Driver + CUDA: `nvidia-smi` must work (driver ≥ 550; CUDA 12.x runtime).
