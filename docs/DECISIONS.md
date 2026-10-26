@@ -605,6 +605,6 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   margin unchanged: what the tree extracts is not a share of a won position but a victim-specific error the victim's
   own extra search does not remove at 800 nodes.
 - Cost at this point: ~1.1 s per move (1.8 s on multi-candidate positions) with four games sharing the GPU, ~50× the
-  control; deviations ~1.8% of moves. Not a wall-clock engine; the Phase 5 fixed-nodes claim only.
+  control; deviations 1.8–2.0% of moves (387 and 432 of ~21.7k). Not a wall-clock engine; the Phase 5 fixed-nodes claim only.
 - Next on the curve: T3-512x15@1000, the victim that beats Stockfish@20k (30.5%). `lc0_t3_n1000_control` running
   (fastchess queue), `lc0_t3_n1000_tree2` follows (~10 s per steered move → ~1 day at 200 rounds; Matthew may cut it).
