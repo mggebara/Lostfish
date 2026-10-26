@@ -1,0 +1,37 @@
+# Exploitability point 4 (GPU_BOX job 4): victim lc0 T3-512x15 @1000 nodes, which beats Stockfish@20k (experiments/lc0_t3_n1000_stockfish). Same openings
+# matches share srand/openings so rounds pair across matches: .venv/bin/python scripts/pair_matches.py <A> <B> --opponent lc0
+# 200 rounds x 2 = 400 games each.
+# Seed: v2 + victim-play tree (depth 2, width 2, min_gain 50) with the EXACT victim model (lc0@800, profile lc0-t3-n1000) at 20k nodes.
+rounds = 200
+games = 2
+concurrency = 3
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261025
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-tree2-exact"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_tree2_g50.yaml"
+nodes = 20000
+[engine.options]
+Steering = true
+Profile = "lc0-t3-n1000"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t3-n1000"
+cmd = "engines/lc0"
+nodes = 1000
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t3-512x15x16h-distill-swa-2767500.pb.gz"
+Threads = 1
+BackendOptions = "max_batch=256"

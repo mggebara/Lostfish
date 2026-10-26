@@ -1,0 +1,19 @@
+{
+ "name": "lc0-t3-n1000",
+ "version": 1,
+ "built_at": "2026-10-26",
+ "n_games": 0,
+ "n_positions": 0,
+ "rating": null,
+ "proxy": "lc0_policy",
+ "effective_depth": 8,
+ "depth_agreement": {},
+ "base_blunder_rate": 0.0,
+ "weak_clusters": [],
+ "openings": [],
+ "notes": {
+  "lc0_weights": "engines/lc0nets/t3-512x15x16h-distill-swa-2767500.pb.gz",
+  "proxy_note": "Exact victim model: lc0 T3-512x15 searched to the victim's own 1000 nodes (bestmove + visit-count alternates)",
+  "lc0_nodes": 1000
+ }
+}

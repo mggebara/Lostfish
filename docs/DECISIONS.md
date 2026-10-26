@@ -568,3 +568,16 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   generation and ceiling matches (`~/after_night.sh`). Combined with this set it gives n = 400 rounds, SE ≈ 1.3.
 - Decision: the exploitability curve is flat from 200 to 800 nodes against T1. Next on the curve: a stronger net
   (T3-512x15 / BT4-1024x15 at 1,000 nodes), gated on Stockfish@20k's score against it (running tonight).
+
+## 2026-10-26 00:45 — Data at scale: 5,000 control-vs-lc0@200 games in 1h25; labelling running; T3-512x15@1000 beats Stockfish@20k (31% after 120 games)
+
+- `experiments/gen_lc0_n200_gpu_a` (v2 tol0 @20k, Profile `_generic`, vs lc0 T1@200, 2,500 rounds × 2, srand 20261026,
+  concurrency 6; clean): 5,000 games in **1h25** (the Mac: ~300 games/h). Control **69.7%**, pentanomial
+  [7, 130, 731, 1153, 479], mean game 130 plies — same level as the Mac's control vs lc0@200 (69–71.5%).
+- Labelling: `mining/victim_errors.py --workers 4` → `data/victim_errors/lc0-t1-n200_gpu_a.parquet`, ~51 victim moves per
+  game at 21 positions/s ⇒ ~255k rows, ~3.3 h (ETA 04:00). Dedupe FENs before any split (24% duplicates last time).
+- Stronger-net ceiling: `lc0_t3_n1000_stockfish` interim after 120 games: Stockfish@20k **31.3%** (3W 48L 69D) vs
+  T3-512x15x16h@1000 — T3 at 1,000 nodes is the "victim that beats Stockfish@20k" GPU_BOX job 4 asks for (final
+  numbers and the BT4 match follow). The T3@1000 point (`experiments/lc0_t3_n1000_{control,tree2}`, profile
+  `lc0-t3-n1000`, same openings as its Stockfish match) is queued after the n800 replication (`~/after_night.sh`, starts
+  when the BT4 match finishes; the labelling is CPU-only and runs alongside).
