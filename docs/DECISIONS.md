@@ -585,3 +585,8 @@ Joined telemetry with the oracle PGNs (≈7k LostFish moves per run, 0 chosen-mo
   (7W 230D 163L), pentanomial [28, 104, 64, 4, 0] → SE ≈ 1.2 (≈ −140 Elo); by colour 34.5% / 26.5%. The victim
   ladder vs Stockfish@20k: T1@200 ≈ 30% for the victim, T1@800 ≈ 49%, T3@1000 ≈ 70%. The T3@1000 point stays queued
   (control ~1 h, tree ~1 day at 200 rounds: ~10 s per steered move); shorten it if a day of GPU is too much.
+- Addendum 01:30 — `lc0_bt4_n1000_stockfish` (placement, 50 rounds × 2, clean, 17 min at concurrency 3): Stockfish@20k
+  **27.0%** (1W 52D 47L), pentanomial [9, 28, 13, 0, 0] → SE ≈ 2.3; by colour 35.0% / 19.0%. BT4@1000 is only a little
+  stronger than T3@1000 (30.5 ± 1.2) against Stockfish@20k at ~2× the search cost (1,169 vs 879 MiB VRAM, ~2.4 vs ~1.2 s
+  per 1,000-node search under load), so **T3-512x15@1000 is the stronger victim for the next point**; BT4 is parked.
+  GPU queue (`~/after_night.sh`) now on `lc0_rep_n800_control` → `lc0_rep_n800_tree2` → `lc0_t3_n1000_control` → `lc0_t3_n1000_tree2`.
