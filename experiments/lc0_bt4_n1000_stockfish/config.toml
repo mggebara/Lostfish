@@ -1,6 +1,7 @@
 # Stronger-victim ceiling check (docs/GPU_BOX.md job 4): plain Stockfish 19 @20k nodes vs lc0-bt4-n1000 (BT4-1024x15x32h-swa-6147500-policytune-332.pb.gz @ 1000 nodes).
+# 50 rounds (100 games): BT4@1000 costs ~2.4 s per search, and T3 already beats Stockfish@20k; this only places BT4 (±4 points).
 # Same openings as the n800 matches (srand 20261025) so Stockfish's results pair across victims by Round.
-rounds = 200
+rounds = 50
 games = 2
 concurrency = 3
 openings = "experiments/openings/8moves_v3.pgn"
