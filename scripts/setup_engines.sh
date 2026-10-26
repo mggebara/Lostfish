@@ -17,8 +17,8 @@ OS="$(uname -s)"; ARCH="$(uname -m)"
 case "$OS-$ARCH" in
   Darwin-arm64)  SF_ASSET="stockfish-macos-universal.tar.gz"; FC_ASSET="fastchess-mac-arm64.tar" ;;
   Darwin-x86_64) SF_ASSET="stockfish-macos-universal.tar.gz"; FC_ASSET="fastchess-mac-x86-64.tar" ;;
-  Linux-x86_64)  SF_ASSET="stockfish-ubuntu-x86-64-avx2.tar"; FC_ASSET="fastchess-linux-x86-64.tar" ;;
-  Linux-aarch64) SF_ASSET="stockfish-android-armv8.tar";      FC_ASSET="fastchess-linux-arm64.tar" ;;
+  Linux-x86_64)  SF_ASSET="stockfish-linux-x86-64-universal.tar.gz"; FC_ASSET="fastchess-linux-x86-64.tar" ;;
+  Linux-aarch64) SF_ASSET="stockfish-linux-arm64-universal.tar.gz";      FC_ASSET="fastchess-linux-arm64.tar" ;;
   *) echo "unsupported platform $OS-$ARCH" >&2; exit 1 ;;
 esac
 
