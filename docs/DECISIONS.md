@@ -805,3 +805,32 @@ The net errs at a similar rate in both pools once phase is accounted for; the Li
 validation and fine-tuning data and phase re-weighting if the validation AUC asks for it. Started
 `mining/cheap_labels_fill.py` on the 294k censored Lichess rows (Stockfish@100k, ~4 h on 3 CPU workers) so
 every pretraining label is exact. The training run waits for the BT4 queue to release the GPU.
+
+## 2026-10-27 02:15 — Certifier ladder: Stockfish@100k is at parity with BT4@1000
+
+**Change.** Ran `lc0_bt4_n1000_sf{100k,400k,1m}` (Stockfish @ 100k / 400k / 1M nodes, Threads 1, Hash 64,
+Syzygy 5-piece, vs BT4-1024x15x32h @ 1000 nodes; 200 games each on the 8moves_v3 openings, srand 20261025,
+concurrency 3). With the earlier 27.0 % @20k point this locates the Stockfish node budget at which the
+certifier matches the victim. The v2 tree points so far certify at 20k nodes (`nodes = 20000` in the tree
+configs), a certifier weaker than T3@1000 (30.5 %) and much weaker than BT4@1000 (27.0 %).
+
+**Measurement** (Stockfish score vs BT4@1000; ± is one pentanomial SE; Elo ± is fastchess's 95 %):
+
+| Stockfish nodes | score | Elo | W / D / L | Ptnml(0-2) | wall, 200 games |
+|---|---|---|---|---|---|
+| 20k (100 games, earlier) | 27.0 ± 2.3 % | −173 ± 41 | 1 / 52 / 47 | [9, 28, 13, 0, 0] | — |
+| 100k | 51.0 ± 1.3 % | +7 ± 17 | 18 / 168 / 14 | [0, 11, 74, 15, 0] | 35 min |
+| 400k | 55.8 ± 1.2 % | +40 ± 17 | 25 / 173 / 2 | [0, 2, 74, 23, 1] | 42 min |
+| 1M | 59.3 ± 1.4 % | +65 ± 20 | 38 / 161 / 1 | [0, 1, 65, 30, 4] | 71 min |
+
+Parity sits at about 100k nodes (log-linear interpolation of the 20k and 100k points puts 50 % near 90k).
+Above parity the curve flattens: +4.8 points for 4× the nodes, +3.5 for the next 2.5×, with draws above
+80 % in every rung. At 1M nodes Stockfish loses one game in 200 and wins 38.
+
+**Decision.** The BT4 exploitability point certifies at Stockfish@100k (parity, +7 ± 17 Elo), five times
+the 20k budget of the T3 points, so Rule 2's damage bound comes from an engine as strong as the victim rather
+than a weaker one. 400k is the conservative fallback if the control at 100k shows the tolerance window
+admitting moves BT4 punishes. Next on the GPU after the blind-spot passes: the BT4 control (v2, Steering
+off, certify 100k) and the BT4 tree point with the exact BT4 proxy, 200 rounds × 2 each on the same
+openings; the control measures the per-move cost of a 100k MultiPV certify plus 1000-node BT4 proxy
+searches before the tree point commits to it.
