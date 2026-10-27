@@ -952,3 +952,41 @@ Stockfish@1M (ten times the reference; 59 % against BT4@1000) for 1,500 flagged 
 blunders, 300 clean controls and 1,000 of T1@200's own blunders. The share of 100k losses that hold at 1M,
 BT4 against T1, is the real-error rate; the BT4 tree point waits for it, since a hole the reference cannot
 price is one the certifier cannot certify either.
+
+## 2026-10-27 08:20 — Deep re-pricing: the 100k reference prices BT4's moves as reliably as T1's; the parity caveat is withdrawn, the rate anomaly is not
+
+**Change.** `scripts/deep_recheck.py` searched root and child at Stockfish@1M (4 workers, 2.2 positions/s,
+21 min) for 1,500 flagged BT4@1000 moves, the 43 control blunders, 300 clean controls and 1,000 of T1@200's
+own played blunders (189 FEN+move pairs occur in both blunder groups and are counted in each).
+
+**Measurement** (share of 100k losses ≥ 100 cp that are still ≥ 100 cp at 1M):
+
+| | BT4@1000 flagged | T1@200 played |
+|---|---|---|
+| all | 74.3 % (n 1,563) | 72.6 % (n 1,063) |
+| \|cp_best\| ≤ 100 | 93.1 % | 85.6 % |
+| 100–300 | 90.3 % | 87.5 % |
+| 300–1500 | 67.5 % | 69.3 % |
+| > 1500 | 3.8 % | 18.5 % |
+| middlegame / endgame | 87 / 60 % | 85 / 65 % |
+| win-prob drop ≥ 0.10 at 1M | 51.5 % | 33.2 % |
+
+Label-noise floor: 5.0 % of BT4's 100k-clean control moves lose ≥ 100 cp at 1M, and 3.2 % of the moves
+that *are* Stockfish@100k's own best do. The 43 control "blunders" were nearly all in decided positions
+(median \|cp_best\| 3000) and 28 % held. Pass-2 rates are the same for both colours (flagged 85.5 / 85.1 %,
+control 1.7 / 1.2 % for Black / White), so no POV error.
+
+The caveat of 07:50 is withdrawn in the form stated: the reference confirms BT4's flagged moves at depth at
+the same rate as T1's, and better in near-equal positions. What remains unexplained is the rate itself:
+BT4@1000's implied ≥ 100 cp rate on T1's game positions (5.6 %, 4.2 % after the 74 % hold) exceeds
+T1@200's played rate (3.0 %, 2.2 %), although BT4 raw errs less often than T1 raw (5.0 % vs 7.5 % on this
+pool, 4.4 % vs 7.65 % on Lichess, now exact). The suspect is procedure: T1's played-move labels come from
+`mining/victim_errors.py`, BT4's from pass 2's search-plus-fill, and T1@200's 200-node search would have to
+remove 60 % of its raw blunders where BT4's 1000-node search removes 15 %.
+
+**Decision.** Two checks run before the BT4 tree point: (1) T1's own pass 2 under the identical procedure
+(`raw_error_survival.py build` on the exact T1 labels, `cheap_labels.py --nodes 200`, fill, report) gives
+T1@200's survival rate; if it is also ~85 %, the `victim_errors` labels are the odd ones and the BT4 result
+stands; if it is ~40 %, BT4's search genuinely closes fewer of its policy's holes. (2) `victim_errors.py`
+on BT4@1000's own 200 games against Stockfish@100k gives its blunder rate in positions of its own making,
+against the 5.6 % on T1's.
