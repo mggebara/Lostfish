@@ -732,3 +732,35 @@ private nets, the odds bots are not standard chess, and `FetaCompli` is a Leela 
 **Decision.** The first deployment's opponent set is the Maia bots (exact at one node, cheap) and
 MostlyHuman1900; `ilovecatgirl` is the one BT4 target worth a mismatch test. No strong public-net Lc0 bot
 at fixed nodes was online in this scan.
+
+## 2026-10-26 23:00 — cheap labels step 1b (addendum): honest numbers after filling the 65k censored rows
+
+**Change.** `mining/cheap_labels_fill.py` evaluated the net's top move with Stockfish@100k for the 65,280 rows
+where it was neither Stockfish's best nor the move played (21 positions/s on 3 workers, 52 min). Every
+on-policy row now has an exact raw-top loss; `scripts/cheap_labels_report.py` adds the transfer table.
+
+**Measurement (264,127 rows).** Raw-top cp loss as a predictor of the search blunder: AUC 0.824 [0.816, 0.833]
+for dWP ≥ 0.10 and 0.829 [0.823, 0.834] for loss ≥ 100; precision@3 % 6.9 % (4.8× lift) and 25.2 % (8.3×).
+The 0.843 / 29.9 % in the 22:20 entry were inflated by the leak. Policy miss unchanged at 0.710.
+Transfer of the cheap label "raw top move loses ≥ 100 cp":
+
+| rows | P(search blunder, cheap = 1) | P(search blunder, cheap = 0) | AUC raw-top loss |
+|---|---|---|---|
+| all | 10.9 % [10.4, 11.3] | 0.7 % | 0.824 |
+| search followed the raw top move (70 %) | 31.1 % [29.7, 32.4] | 0.3 % | 0.987 |
+| search overrode it (30 %) | 4.9 % [4.6, 5.2] | 1.9 % | 0.594 [0.581, 0.607] |
+
+(dWP ≥ 0.10 label; for loss ≥ 100: 29.2 % vs 0.9 % overall, 100 % vs 0.1 % when followed, 8.2 % vs 3.3 %
+when overridden, AUC 0.550 when overridden.)
+
+**Reading.** The cheap label is the policy's error, and it is nearly exact for the 70 % of decisions where
+200 nodes of search follow the policy. Where the search overrides the policy it carries little (AUC 0.55–0.59,
+2.6× ratio): those residual blunders are what search labels are for. Overall a position flagged by the raw net
+is 7.5× (dWP) to 9.6× (cp) more likely to be a real blunder than the base rate, which is the enrichment a
+gate needs; the exact tree then verifies with the real search.
+
+**Decision.** Pretraining on cheap labels is justified as a *policy-error* model with fine-tuning on search
+labels for the residual; the off-policy comparison (Lichess 2 M, running) decides the data mix. Protocol for
+the run: train `training/victim_error_model.py` on the cheap-labelled pool, then fine-tune from that
+state_dict on the 264k on-policy rows, compare validation AUC with the from-scratch model, and gate on the
+predictor-gated tree gauntlet (`lc0_long_n200_predgate` protocol) before any deployment.
