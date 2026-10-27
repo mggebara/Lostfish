@@ -891,3 +891,30 @@ those mistakes survive BT4's search is pass 2, queued behind the pretraining run
 them, the Stockfish fill prices the chosen moves, and `report` gives the search-blunder rate per group with
 Wilson intervals. The control group is BT4@1000's base blunder rate; a flagged rate several times higher
 says the net has holes its search does not close.
+
+## 2026-10-27 06:00 — Pretraining on cheap labels: no measurable gain for the T1 error model
+
+**Change.** The protocol from 2026-10-26 23:00 ran on the GPU box, all three runs with the c128b8
+architecture (2.52 M parameters) and the same game split: (1) scratch on the 264k on-policy rows (245,370
+after dedupe, 5,000 games, 10 epochs, lr 1e-3; 3 min); (2) the same net on the 2 M cheap Lichess rows
+(1,613,084 after the trainer's filters, one position per "game", 3 epochs; 6 min), val AUC 0.740 on its own
+task; (3) fine-tune from that checkpoint on the on-policy rows (10 epochs, lr 3e-4, best at epoch 5; 3 min).
+
+**Measurement** (on-policy validation, 37,376 positions from held-out games):
+
+| | scratch | pretrained + fine-tuned |
+|---|---|---|
+| val AUC, blunder = dWP ≥ 0.10 (1.5 % positives) | 0.680 | 0.686 |
+| val AUC, blunder = loss ≥ 100 cp (1,104 positives) | 0.621 | 0.611 |
+| precision@3 %, loss ≥ 100 cp (base 3.0 %) | 6.5 % | 6.5 % |
+
+Paired bootstrap of the AUC difference on the loss ≥ 100 cp label (300 resamples of the same validation rows):
+−0.010 ± 0.008 (1 SE), 95 % [−0.024, +0.005]. The two label definitions disagree on the sign and neither
+difference clears one standard error; the top-3 % shortlist is identical in precision.
+
+**Decision.** More seeds or epochs cannot move this: the effect is bounded at about ±0.01 AUC either way,
+below what the predictor-gated tree gauntlet resolves, so pretraining on cheap labels is dropped as a lever
+for the T1 error model. The cheap-label pipeline keeps its other job, the blind-spot scan of the big net
+(pass 1 above, pass 2 running), where the raw-policy error is the quantity itself and not a proxy. The
+predictor's ceiling (0.68 AUC from 5,000 games) is an on-policy data question: more victim games, not more
+off-policy positions.
