@@ -186,7 +186,15 @@ def main(argv: list[str] | None = None) -> int:
         "--max-abs-cp", type=int, default=1500, help="drop decided positions (|cp_best| > this)"
     )
     ap.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cpu")
+    ap.add_argument(
+        "--init",
+        default=None,
+        help="checkpoint (.pt) to start from: pretrain on cheap labels, then fine-tune on search labels",
+    )
     args = ap.parse_args(argv)
+    init = torch.load(args.init, map_location="cpu") if args.init else None
+    if init is not None:  # the architecture comes from the checkpoint
+        args.channels, args.blocks = int(init["channels"]), int(init["blocks"])
 
     df = pd.read_parquet(args.data)
     df = df[
@@ -215,6 +223,9 @@ def main(argv: list[str] | None = None) -> int:
     Xt = torch.from_numpy(X)
     yb, yl = torch.from_numpy(y_bl), torch.from_numpy(y_lg)
     model = VictimErrorNet(args.channels, args.blocks).to(dev)
+    if init is not None:
+        model.load_state_dict(init["state_dict"])
+        _log(f"initialised from {args.init} ({args.channels}ch x {args.blocks} blocks)")
     n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     steps = args.epochs * (len(tr) // args.batch + 1)
@@ -297,6 +308,8 @@ def main(argv: list[str] | None = None) -> int:
         "epochs": args.epochs,
         "channels": args.channels,
         "blocks": args.blocks,
+        "init": args.init,
+        "lr": args.lr,
     }
     (Path(args.out) / "victim_error_summary.json").write_text(json.dumps(summary, indent=1))
     _log(
