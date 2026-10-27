@@ -780,3 +780,28 @@ certify budget at parity, which bounds any exploit (Rule 2). (2) Blind-spot pass
 positions. Pass 2 (`--nodes 1000`/`4000`, the victim's own search on the flagged shortlist, Stockfish fill
 for the losses) follows in the morning: the survival rate of raw-net errors under BT4's search is the
 number that says whether the big net has a systematic hole.
+
+## 2026-10-26 23:45 — cheap labels step 2: 2 M Lichess positions labelled by the raw T1 net; pools are comparable
+
+**Change.** `mining/lichess_eval.py` streamed the first 2,000,000 qualifying positions (depth ≥ 20, ≥ 2 PVs)
+from `lichess_db_eval.jsonl.zst` (343 s, 3.77 M records read, 65 % kept, 89 MB parquet); `mining/cheap_labels.py`
+labelled them with the raw T1 net at 342 positions/s (97 min). `scripts/cheap_labels_offpolicy_report.py`
+compares the pools.
+
+**Measurement.**
+
+| | Lichess 2 M (off-policy) | control-vs-lc0@200 games (on-policy, 264k) |
+|---|---|---|
+| raw top = Stockfish best | 54.5 % [54.4, 54.5] | 52.1 % [51.9, 52.2] |
+| raw-top loss ≥ 100 cp | 4.2 % sure … 17.4 % upper bound (14.7 % censored, 13.2 % undecidable) | 7.5 % (exact) |
+| phase mix opening / middlegame / endgame | 40 / 33 / 27 % | 14 / 40 / 47 % |
+| sure-blunder by phase | 1.4 / 7.7 / 4.0 % | 3.2 / 9.1 / 7.4 % |
+| \|cp_best\| median / mean; within 100 cp of equal | 61 / 573; 60 % | 44 / 304; 63 % |
+
+The net errs at a similar rate in both pools once phase is accounted for; the Lichess pool has more openings
+(our games start after 16 book plies) and more decided positions (users analyse the interesting ones).
+
+**Decision.** The off-policy pool is fit for pretraining a policy-error model, with the on-policy rows as
+validation and fine-tuning data and phase re-weighting if the validation AUC asks for it. Started
+`mining/cheap_labels_fill.py` on the 294k censored Lichess rows (Stockfish@100k, ~4 h on 3 CPU workers) so
+every pretraining label is exact. The training run waits for the BT4 queue to release the GPU.
