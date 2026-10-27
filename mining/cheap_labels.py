@@ -6,7 +6,8 @@
 Input: a parquet with a `fen` column plus optional references, all centipawns from the side to move:
 `best`/`cp_best` (reference best move and its eval), `move`/`cp_after` (a second move and its eval) and/or
 `ref_moves`/`ref_cps` (lists, for multi-PV sources such as the Lichess evaluation database). Every unique
-FEN is evaluated once with `Lc0PolicyProxy(nodes=1)` (root policy and root Q straight from the net); the
+FEN is evaluated once with `Lc0PolicyProxy(nodes=--nodes)` (default 1: root policy and root Q straight from
+the net; N > 1: the victim's own search, so raw_top is its bestmove-by-visits and q its search value); the
 references of the first row with that FEN are used.
 
 Output: one row per unique FEN with raw_top (the net's top-policy move), raw_top_p, p_best (policy mass
@@ -108,16 +109,16 @@ def evaluate_fens(proxy: Any, fens: Iterable[str]) -> list[dict[str, Any]]:
     return out
 
 
-def _make_proxy(lc0: str, weights: str) -> Any:
-    return Lc0PolicyProxy(lc0, weights, threads=1, nodes=1, name="cheap-labels")
+def _make_proxy(lc0: str, weights: str, nodes: int = 1) -> Any:
+    return Lc0PolicyProxy(lc0, weights, threads=1, nodes=nodes, name="cheap-labels")
 
 
 _PROXY: Any = None
 
 
-def _init_worker(lc0: str, weights: str) -> None:
+def _init_worker(lc0: str, weights: str, nodes: int = 1) -> None:
     global _PROXY
-    _PROXY = _make_proxy(lc0, weights)
+    _PROXY = _make_proxy(lc0, weights, nodes)
 
 
 def _work(fens: list[str]) -> list[dict[str, Any]]:
@@ -146,6 +147,7 @@ def run(
     weights: str,
     out: Path,
     workers: int = 6,
+    nodes: int = 1,
     chunk: int = 64,
     flush_every: int = 50,
     resume: bool = False,
@@ -176,7 +178,7 @@ def run(
             _log(f"{n}/{len(todo)} positions, {n / el:.0f} pos/s, {el:.0f} s")
 
     if workers <= 0:
-        proxy = _make_proxy(lc0, weights)
+        proxy = _make_proxy(lc0, weights, nodes)
         for i, ch in enumerate(chunks, 1):
             rows.extend(_rows(evaluate_fens(proxy, ch), refs_by_fen))
             progress(i)
@@ -184,7 +186,7 @@ def run(
                 flush()
     else:
         ctx = mp.get_context("spawn")
-        with ctx.Pool(workers, initializer=_init_worker, initargs=(lc0, weights)) as pool:
+        with ctx.Pool(workers, initializer=_init_worker, initargs=(lc0, weights, nodes)) as pool:
             for i, res in enumerate(pool.imap_unordered(_work, chunks), 1):
                 rows.extend(_rows(res, refs_by_fen))
                 progress(i)
@@ -200,6 +202,7 @@ def run(
         "wall_s": round(wall, 1),
         "pos_per_s": round(len(todo) / wall, 1) if wall > 0 else None,
         "median_ms": float(pd.Series([r["ms"] for r in rows]).median()) if rows else None,
+        "nodes": nodes,
         "lc0": lc0,
         "weights": weights,
     }
@@ -217,6 +220,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--weights", default=None, help="overrides the profile's weights")
     ap.add_argument("--lc0", default="engines/lc0")
+    ap.add_argument(
+        "--nodes",
+        type=int,
+        default=1,
+        help="proxy search nodes: 1 = raw net (blind-spot pass 1), N = the victim's own search (pass 2)",
+    )
     ap.add_argument("--workers", type=int, default=6, help="0 = in-process (debugging)")
     ap.add_argument("--chunk", type=int, default=64)
     ap.add_argument("--flush-every", type=int, default=50, help="write the parquet every N chunks")
@@ -240,6 +249,7 @@ def main(argv: list[str] | None = None) -> int:
         weights=str((ROOT / weights).resolve()) if not Path(weights).is_absolute() else weights,
         out=Path(args.out),
         workers=args.workers,
+        nodes=args.nodes,
         chunk=args.chunk,
         flush_every=args.flush_every,
         resume=args.resume,

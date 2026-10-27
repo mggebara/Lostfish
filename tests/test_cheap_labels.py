@@ -67,7 +67,7 @@ class FakeProxy:
 def test_run_in_process_dedupes_fens_and_resumes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(cl, "_make_proxy", lambda lc0, weights: FakeProxy())
+    monkeypatch.setattr(cl, "_make_proxy", lambda lc0, weights, nodes=1: FakeProxy())
     FakeProxy.calls = 0
     df = pd.DataFrame(
         {

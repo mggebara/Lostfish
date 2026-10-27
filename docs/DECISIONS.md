@@ -764,3 +764,19 @@ labels for the residual; the off-policy comparison (Lichess 2 M, running) decide
 the run: train `training/victim_error_model.py` on the cheap-labelled pool, then fine-tune from that
 state_dict on the 264k on-policy rows, compare validation AUC with the from-scratch model, and gate on the
 predictor-gated tree gauntlet (`lc0_long_n200_predgate` protocol) before any deployment.
+
+## 2026-10-26 23:40 — Priority: the largest net (BT4). Clock gate deferred; certifier ladder and BT4 blind-spot pass queued
+
+**Change (Matthew, 2026-10-26).** The target is overcoming the largest Lc0 net, not a registry of replicable
+Lichess bots. BT4-1024x15x32h is the largest released net; BT5 (late 2025) is larger in training but measured
+weaker than BT4 at equal nodes (Lc0 FAQ: ~12 Elo at equal nodes, ~50 at short time controls), so BT4 stays the
+victim. The queued clocked 3+0 matches (`clock_3m_*`, clock-safety gate for `clock_skip`) were cancelled before
+starting and wait for the bot setup; `clock_skip` is inert for fixed-node play and unit-tested.
+
+**Queued tonight (GPU after the Lichess pass).** (1) Certifier ladder `lc0_bt4_n1000_sf{100k,400k,1m}`:
+Stockfish@100k/400k/1M vs BT4@1000, 200 games each, same openings as the 27.0 % @20k point — finds the
+certify budget at parity, which bounds any exploit (Rule 2). (2) Blind-spot pass 1 with the BT4 net
+(`mining/cheap_labels.py --weights BT4`, one node) over the 264k on-policy positions and the 2 M Lichess
+positions. Pass 2 (`--nodes 1000`/`4000`, the victim's own search on the flagged shortlist, Stockfish fill
+for the losses) follows in the morning: the survival rate of raw-net errors under BT4's search is the
+number that says whether the big net has a systematic hole.
