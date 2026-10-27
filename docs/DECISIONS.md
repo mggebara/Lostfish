@@ -654,3 +654,30 @@ victim's real search blunders before any training run:
 3. Only then a pretrain-on-cheap-labels / fine-tune-on-search-labels run, gated by a gauntlet against the
    current predictor. Batched inference outside lc0 (leela2onnx export) only if the nodes=1 path proves useful
    and too slow.
+
+## 2026-10-26 21:55 — T3@1000 exploitability point: exact tree +4.9 ± 1.7 over the control (z = 2.9)
+
+**Change.** `experiments/lc0_t3_n1000_tree2` finished (400 games, exact tree `v2_tree2_g50.yaml`, Profile
+lc0-t3-n1000, vs lc0 T3 512x15 @ 1000 nodes, 8moves_v3 openings, srand 20261025, concurrency 3). Run history:
+Windows Update reboot at game ~176, resumed from the game-158 autosave; paused at 296 for a shutdown; resumed
+and finished 21:44. 417 games in the PGN, 399 unique (Round, colour) after taking the last replay of each;
+one scheduled game has no surviving record. Zero engine errors.
+
+**Measurement (same openings, paired by Round and colour, SE over rounds).**
+
+| vs lc0 T3@1000 | score | W / D / L | paired diff vs tree | 95 % |
+|---|---|---|---|---|
+| exact tree (Profile lc0-t3-n1000) | 36.6 % | 14 / 265 / 121 | — | — |
+| control (tol 0, `_generic`) | 31.6 % | 10 / 233 / 157 | +4.9 ± 1.7 | [+1.6, +8.2], z = 2.89 |
+| Stockfish @ 20k nodes | 30.5 % | 7 / 230 / 163 | +6.1 ± 1.7 | [+2.9, +9.4], z = 3.69 |
+
+Context: the same tree gained +5.8 ± 1.6 at T1@200 and +5.7 ± 1.4 at T1@800 (combined 800 games). Against
+a net four times larger searched five times deeper, where Stockfish@20k itself scores 30 %, the gain is the
+same +5 points. Telemetry (23,612 LostFish moves under this profile, replays included): 266 deviations from
+Stockfish's first choice (1.1 %); reasons single_candidate 48 %, fallback_best 18 %, steer 34 %; ms/move
+median 961, mean 1,902 — the exact T3@1000 proxy costs ~1 s per move, 6–13× the 150 ms target.
+
+**Decision.** The exploit transfers to the stronger victim at unchanged size; the ceiling moved (36.6 % vs
+51–53 % at T1@800) because the victim is stronger, not because steering stopped working. More games would
+only narrow the interval; the next levers are proxy cost (the T3 tree is too slow for play) and the
+predictor. The cheap-label docket (below, 08:12 entry) is the next measurement.
