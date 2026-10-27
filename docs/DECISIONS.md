@@ -990,3 +990,35 @@ T1@200's survival rate; if it is also ~85 %, the `victim_errors` labels are the 
 stands; if it is ~40 %, BT4's search genuinely closes fewer of its policy's holes. (2) `victim_errors.py`
 on BT4@1000's own 200 games against Stockfish@100k gives its blunder rate in positions of its own making,
 against the 5.6 % on T1's.
+
+## 2026-10-27 08:40 — Correction: pass 2 re-priced the prior's move, not the search's; survival from the games is 29 % for T1@200 and 10 % for BT4@1000
+
+**Change.** `mining/cheap_labels.py` took `raw_top` from `Lc0PolicyProxy.root_policy()`, which returns the
+net's prior at any node count: at `--nodes 1000` the search ran (1.1 s per position) but the label was still
+the prior's top move. The pass-2 survival (85 %) and "keeps the raw move" (90 / 98 %) figures of 07:50 are
+the prior re-priced, and the "anomaly" of BT4@1000 scoring more reference losses than T1@200 was this bug.
+Fixed: at N > 1 the labelled policy is the visit distribution with lc0's bestmove strictly on top
+(`searched_policy`, test added). Found by labelling BT4@1000's own 200 ladder games with
+`mining/victim_errors.py` and comparing the played move with the raw top.
+
+**Measurement** (the victim's actual game move against its raw top; Stockfish@100k reference; loss ≥ 100 cp):
+
+| | T1@200, 264k positions of its games | BT4@1000, 10,462 positions of its games |
+|---|---|---|
+| raw-top blunder rate | 7.53 % | 2.47 % |
+| played-move blunder rate | 3.03 % | 0.37 % |
+| played move = raw top: overall / on raw blunders | 69.9 / 22.8 % | 72.4 / 8.5 % |
+| survival P(played blunder \| raw blunder) | 29.2 % | 10.5 % |
+| survival in near-equal positions (\|cp_best\| ≤ 100) | 11.6 % | 2.7 % |
+| P(played blunder \| raw clean) | 0.90 % | 0.12 % |
+
+The 1000-node search closes nine in ten of BT4's raw holes in its own games; the 200-node search closes
+seven in ten of T1's. The 1M re-pricing (08:20) stands as a statement about the prior's move: where BT4's
+prior is wrong it is wrong by Stockfish's lights at any depth, but the search usually does not follow the
+prior there. Positions from T1's games are twice as hard for BT4's prior as its own (5.0 % vs 2.5 % raw
+blunders).
+
+**Decision.** Pass 2b re-runs both shortlists with the fixed labeller: T1 at 200 nodes first, whose survival
+must land near the game-derived 29 % (the validation of the fix), then BT4 at 1000 nodes (1.6 h). The number
+for the BT4 point is the corrected survival on T1's game positions against the 10.5 % in BT4's own games:
+it bounds how many reachable positions keep a BT4 error after its search.

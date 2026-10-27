@@ -96,3 +96,22 @@ def test_run_in_process_dedupes_fens_and_resumes(
     )
     frame2 = cl.run(more, lc0="lc0", weights="w.pb.gz", out=out, workers=0, chunk=2, resume=True)
     assert FakeProxy.calls == 3 and len(frame2) == 4
+
+
+class SearchedFakeProxy(FakeProxy):
+    """nodes > 1: the prior still favours a2a3, but the search's visits and bestmove favour h2h3."""
+
+    nodes = 1000
+
+    def root_policy(self, board: chess.Board) -> dict[str, float]:
+        policy = super().root_policy(board)
+        self.last_visits = dict.fromkeys(policy, 1)
+        self.last_visits["h2h3"] = 900
+        self.last_bestmove = chess.Move.from_uci("h2h3")
+        return policy
+
+
+def test_evaluate_fens_labels_the_search_move_when_nodes_exceed_one() -> None:
+    top = lambda evs: max(evs[0]["policy"], key=evs[0]["policy"].__getitem__)
+    assert top(cl.evaluate_fens(SearchedFakeProxy(), [chess.STARTING_FEN])) == "h2h3"
+    assert top(cl.evaluate_fens(FakeProxy(), [chess.STARTING_FEN])) == "a2a3"

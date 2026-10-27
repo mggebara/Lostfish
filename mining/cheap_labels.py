@@ -91,6 +91,20 @@ def cheap_label(
     }
 
 
+def searched_policy(proxy: Any, prior: dict[str, float]) -> dict[str, float]:
+    """At N > 1 nodes the label is the search's choice, not the prior: visit fractions from the proxy's last
+    search with lc0's own bestmove strictly on top (`Lc0PolicyProxy.root_policy` returns the prior at any N)."""
+    visits = dict(getattr(proxy, "last_visits", None) or {})
+    total = sum(visits.values())
+    if total <= 0:
+        return prior
+    policy = {m: n / total for m, n in visits.items()}
+    best = getattr(proxy, "last_bestmove", None)
+    if best is not None and best.uci() in policy:
+        policy[best.uci()] = max(policy.values()) + 1e-9
+    return policy
+
+
 def evaluate_fens(proxy: Any, fens: Iterable[str]) -> list[dict[str, Any]]:
     """Raw policy and root Q for each FEN from a `Lc0PolicyProxy`-like object (duck-typed for tests)."""
     out: list[dict[str, Any]] = []
@@ -102,6 +116,8 @@ def evaluate_fens(proxy: Any, fens: Iterable[str]) -> list[dict[str, Any]]:
             continue
         t0 = time.perf_counter()
         policy = dict(proxy.root_policy(board))
+        if getattr(proxy, "nodes", 1) > 1:
+            policy = searched_policy(proxy, policy)
         ms = (time.perf_counter() - t0) * 1000.0
         out.append(
             {"fen": fen, "policy": policy, "q_cp": proxy.last_eval_cp, "n_legal": n_legal, "ms": ms}
