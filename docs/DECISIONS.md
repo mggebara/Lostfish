@@ -715,3 +715,20 @@ Policy miss has no such leak.
 **Decision.** Signal confirmed for the policy-miss label (AUC 0.71 against baselines at chance), so step 2
 (2 M Lichess positions, `mining/lichess_eval.py`, labelling running) proceeds. The training decision waits
 for the filled cp-loss numbers and the off-policy comparison.
+
+## 2026-10-26 22:35 — Replicable opponents on Lichess: a short list
+
+**Change.** `mining/bot_registry.py` scans the public bios of online bots (no token) for Lc0/Leela/Maia
+setups; output `docs/REPLICABLE_BOTS.md` (table) and `data/bots/registry.json` (every bot seen, raw bio;
+untracked). One run sees only the bots online at that moment; rerun with `--merge` on other days.
+
+**Measurement.** 300 online bots, 14 bio hits. Reading them: exactly replicable today are the official Maia
+bots `maia1`/`maia5`/`maia9` (public nets, one node; profiles exist) and `MostlyHuman1900` (Maia-1900 plus
+opening-explorer openings). `ilovecatgirl` (2904 blitz, 5.4k games) runs Lc0 0.32.1 with BT4 on an M4 Mac
+at a time budget, so a fixed-node model is only approximate. `LeelaAlien`/`LeelaTroll` pick deliberately
+unexpected moves from BT4 and maia3 (not the engine's move), `Joan_clone`/`Bot5551`/`maia2200_10n` use
+private nets, the odds bots are not standard chess, and `FetaCompli` is a Leela net trained against Maia.
+
+**Decision.** The first deployment's opponent set is the Maia bots (exact at one node, cheap) and
+MostlyHuman1900; `ilovecatgirl` is the one BT4 target worth a mismatch test. No strong public-net Lc0 bot
+at fixed nodes was online in this scan.
