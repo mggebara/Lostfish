@@ -1022,3 +1022,20 @@ blunders).
 must land near the game-derived 29 % (the validation of the fix), then BT4 at 1000 nodes (1.6 h). The number
 for the BT4 point is the corrected survival on T1's game positions against the 10.5 % in BT4's own games:
 it bounds how many reachable positions keep a BT4 error after its search.
+
+## 2026-10-27 09:00 — Pause (box shutdown): pass 2b stopped at 11,520 / 22,882 of the T1 search; resume recipe
+
+**State.** Pass 2b (the fixed labeller on the two shortlists) was stopped cleanly during the T1@200 search
+step; `data/cheap_labels/t1_pass2b_n200.parquet` holds the flushed half and `mining/cheap_labels.py --resume`
+skips it. Nothing else is running. The BT4 search (1.6 h), both fills and both reports are still to do.
+
+**Resume (GPU box).** `~/pass2b_queue.sh` now passes `--resume`; run
+`setsid nohup ~/pass2b_queue.sh > logs/pass2b_queue.log 2>&1 < /dev/null &` from `~/dev/LostFish`. Validation
+first: the T1 report's flagged `search_blunder_pct` must land near the game-derived 29 % (entry 08:40). Then
+the BT4 report's flagged rate, against 10.5 % in BT4's own games, is the number the BT4 tree point waits for.
+
+**Done today, all pushed.** Certifier ladder (Stockfish@100k at parity with BT4@1000); Lichess fill complete
+and exact (raw T1 7.65 %, raw BT4 4.44 %); BT4 blind-spot pass 1 (raw BT4 errs on 5.0 % of T1's game
+positions, 2.5 % of its own, nine in ten of them where T1 also errs); pretraining on cheap labels dropped
+(no measurable gain); 1M re-pricing (74 % of the prior's flagged losses hold); the pass-2 labeller bug
+found and fixed; game-derived search survival 29 % (T1@200) and 10.5 % (BT4@1000).
