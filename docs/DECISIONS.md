@@ -859,3 +859,35 @@ analyse their sharp positions). `training/cheap_dataset.py` therefore keeps all 
 **Decision.** The pretraining protocol runs as queued (scratch c128b8 on the 264k on-policy rows, then
 3 epochs on the 2 M cheap rows, then fine-tuning from that checkpoint), after the BT4 Lichess pass releases
 the GPU. The comparison that matters is validation AUC on held-out on-policy games, scratch vs fine-tuned.
+
+## 2026-10-27 05:50 — BT4 blind-spot pass 1: the raw BT4 net errs half as often as T1, and almost only where T1 errs too
+
+**Change.** `mining/cheap_labels.py --weights BT4 --nodes 1` over the 264k on-policy positions (197 pos/s,
+22 min, 5 workers) and the 2 M Lichess positions (194 pos/s, 2.9 h). BT4's raw-top loss is exact where the
+move is a reference move or coincides with T1's (filled) raw top; the Stockfish fill of the rest is running
+(56,772 on-policy rows, then the Lichess rows), so the rates below are on known rows and the pass-2 entry
+restates them exact.
+
+**Measurement** (raw net, one node, loss ≥ 100 cp):
+
+| | BT4 raw | T1 raw |
+|---|---|---|
+| on-policy: raw top = Stockfish best | 57.2 % | 52.1 % |
+| on-policy: blunder rate (known rows, 85.7 % of 264k) | 3.21 % | 7.53 % |
+| on-policy by phase opening / middlegame / endgame | 1.0 / 3.6 / 3.6 % | 3.2 / 9.1 / 7.4 % |
+| Lichess: raw top = best | 61.1 % | 54.5 % |
+| Lichess: sure blunders … upper bound | 2.2 % … 12.6 % | 7.65 % (exact) |
+| mean policy mass on Stockfish's best | 0.327 | 0.253 |
+
+Overlap on the on-policy pool: BT4's raw top equals T1's on 67.7 % of positions. Where T1's raw top is a
+blunder, BT4's is one 40.4 % of the time (the same move 30.7 %); where T1's is not, 0.35 %. That is a 115×
+enrichment, and about nine in ten of BT4's raw blunders sit on positions where T1 also blunders.
+
+**Decision.** The big net's raw mistakes are close to a subset of the small net's, which is what a
+transferable error model needs: a predictor trained on T1 labels also ranks BT4's raw mistakes. Whether
+those mistakes survive BT4's search is pass 2, queued behind the pretraining runs:
+`scripts/raw_error_survival.py build` takes every flagged on-policy position (BT4 raw loss ≥ 100 cp) plus
+3,000 random known-clean controls, `mining/cheap_labels.py --nodes 1000` plays BT4's own 1000-node search on
+them, the Stockfish fill prices the chosen moves, and `report` gives the search-blunder rate per group with
+Wilson intervals. The control group is BT4@1000's base blunder rate; a flagged rate several times higher
+says the net has holes its search does not close.
