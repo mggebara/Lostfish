@@ -918,3 +918,37 @@ for the T1 error model. The cheap-label pipeline keeps its other job, the blind-
 (pass 1 above, pass 2 running), where the raw-policy error is the quantity itself and not a proxy. The
 predictor's ceiling (0.68 AUC from 5,000 games) is an on-policy data question: more victim games, not more
 off-policy positions.
+
+## 2026-10-27 07:50 — BT4 blind-spot pass 2: at 1000 nodes the search keeps the raw net's flagged move 90 % of the time, but the 100k reference cannot price it
+
+**Change.** `scripts/raw_error_survival.py build` took the 13,243 on-policy positions where BT4's raw top
+loses ≥ 100 cp (5.0 % of 264k, all exact after the fill) and 3,000 known-clean controls;
+`mining/cheap_labels.py --nodes 1000` played BT4's own 1000-node search on each (3 workers, 2.8 pos/s,
+median 1.1 s per search, 1.6 h); the Stockfish@100k fill priced the 9,002 chosen moves that had no
+reference eval.
+
+**Measurement** (BT4@1000's chosen move, loss against the Stockfish@100k reference):
+
+| | flagged (raw loss ≥ 100) | control (raw loss < 100) |
+|---|---|---|
+| positions | 13,243 | 3,000 |
+| search keeps the raw net's move | 89.7 % | 97.9 % |
+| chosen move = Stockfish's best | 4.9 % | 60.2 % |
+| loss ≥ 100 cp | 85.3 % [84.7, 85.9] | 1.43 % [1.07, 1.93] |
+| win-prob drop ≥ 0.10 | 52.2 % | 1.1 % |
+| loss ≥ 100 by phase, opening / middlegame / endgame | 84 / 87 / 84 % | 0.5 / 1.1 / 2.0 % |
+
+**Caveat that blocks the conclusion.** Mixing the two groups by their pool shares implies BT4@1000 loses
+≥ 100 cp on 5.6 % of the pool's positions (3.7 % by win-prob drop), more than the T1@200 victim that
+actually played them (3.0 % / 1.5 %). That is not credible for a far stronger engine. The reference is the
+problem: Stockfish@100k is at parity with BT4@1000 (ladder entry above), so where the two disagree by 100 cp
+either may be right, and the label books every disagreement as BT4's error; for T1@200, far below the
+reference, the same label is almost always T1's error. Pass 2 therefore measures how policy-dominated
+BT4's 1000-node search is (it overrides its raw top on 10 % of flagged positions and 2 % of clean ones), not
+yet how often BT4 blunders.
+
+**Decision.** Re-price before concluding. `scripts/deep_recheck.py` searches root and child at
+Stockfish@1M (ten times the reference; 59 % against BT4@1000) for 1,500 flagged positions, the 43 control
+blunders, 300 clean controls and 1,000 of T1@200's own blunders. The share of 100k losses that hold at 1M,
+BT4 against T1, is the real-error rate; the BT4 tree point waits for it, since a hole the reference cannot
+price is one the certifier cannot certify either.
