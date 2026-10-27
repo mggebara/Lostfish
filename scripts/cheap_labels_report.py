@@ -116,6 +116,34 @@ def main(argv: list[str]) -> int:
             p, lo, hi = wilson(int(y[mask].sum()), int(mask.sum()))
             print(f"\n{name}: blunder rate {fmt(p, lo, hi, pct=True)} % (n={mask.sum()})", end="")
         print()
+    # transfer: the raw top move's own cp loss as a cheap stand-in for the search blunder
+    rtl = df["raw_top_loss"].to_numpy(dtype=float)
+    known = ~np.isnan(rtl)
+    cheap_bl = rtl >= BLUNDER_CP
+    if "raw_top_loss_src" in df:
+        print(
+            f"\nraw-top loss sources: {df['raw_top_loss_src'].value_counts(dropna=False).to_dict()}"
+        )
+    for lname, y in labels.items():
+        print(
+            f"\n### transfer of raw-top loss>={BLUNDER_CP}cp to {lname} (rows with a known raw-top loss)\n"
+        )
+        print(
+            "| subset | n | P(blunder, cheap=1) | P(blunder, cheap=0) | AUC policy miss | AUC raw-top loss |"
+        )
+        print("|---|---|---|---|---|---|")
+        subsets = (
+            ("all", known),
+            ("raw top == played", known & agree),
+            ("raw top != played", known & ~agree),
+        )
+        for sname, mask in subsets:
+            yy, cb = y[mask], cheap_bl[mask]
+            p1 = fmt(*wilson(int(yy[cb].sum()), int(cb.sum())), pct=True)
+            p0 = fmt(*wilson(int(yy[~cb].sum()), int((~cb).sum())), pct=True)
+            a1 = fmt(*auc_ci(1.0 - df["p_best"].to_numpy()[mask], yy))
+            a2 = fmt(*auc_ci(rtl[mask], yy))
+            print(f"| {sname} | {mask.sum()} | {p1} | {p0} | {a1} | {a2} |")
     return 0
 
 

@@ -681,3 +681,37 @@ median 961, mean 1,902 — the exact T3@1000 proxy costs ~1 s per move, 6–13×
 51–53 % at T1@800) because the victim is stronger, not because steering stopped working. More games would
 only narrow the interval; the next levers are proxy cost (the T3 tree is too slow for play) and the
 predictor. The cheap-label docket (below, 08:12 entry) is the next measurement.
+
+## 2026-10-26 22:20 — cheap raw-net labels, step 1: the raw policy carries real signal about search blunders (preliminary)
+
+**Change.** `mining/cheap_labels.py` evaluates each unique FEN with the T1 net at one node
+(`Lc0PolicyProxy(nodes=1)`: root policy and root Q, no search); `scripts/cheap_labels_report.py` scores the
+cheap quantities as predictors of the search label in `data/victim_errors/lc0-t1-n200_gpu_a.parquet`
+(264,127 rows, 264,066 unique FENs, label from the 200-node victim and Stockfish@100k).
+
+**Measurement.** Throughput 359 positions/s with 6 workers (735 s for all 264k; median 16 ms per position
+per process, i.e. ~4× cheaper per process than the 70 ms 200-node search and ~7× cheaper end to end than
+playing and labelling games, which yielded 52 labels/s). Raw top move = move played at 200 nodes 69.9 %;
+= Stockfish best 52.1 %. Blunder rate (dWP ≥ 0.10) 1.0 % when the search followed the raw top move
+(n = 184,522) vs 2.5 % when it deviated (n = 79,605).
+
+| predictor of dWP ≥ 0.10 (rate 1.45 %) | AUC [95 %] | precision@3 % | lift |
+|---|---|---|---|
+| policy miss (1 − p_best) | 0.710 [0.701, 0.719] | 4.7 % | 3.2× |
+| raw-top cp loss (75 % of rows; see caveat) | 0.843 [0.834, 0.853] | 29.9 % | 23× |
+| \|raw Q − cp_best\| | 0.564 [0.554, 0.573] | 0.1 % | 0.1× |
+| baseline: depth-10 Stockfish loss | 0.502 [0.493, 0.512] | 1.1 % | 0.8× |
+| baseline: \|cp_best\| | 0.544 [0.535, 0.554] | 0.0 % | 0.0× |
+
+For loss ≥ 100 cp (rate 3.03 %): policy miss 0.708, raw-top loss 0.885, value error 0.740 (but \|cp_best\|
+alone scores 0.771 there, so the value error adds little beyond eval magnitude), depth-10 loss 0.593.
+
+**Caveat.** The raw-top cp-loss row is partly tautological on this data: the loss is only known when the
+top move is Stockfish's best (loss 0) or the move the victim played (then the loss *is* the label).
+`mining/cheap_labels_fill.py` is computing Stockfish@100k losses for the 65,268 censored rows (25 %); the
+honest number, including the subset where the search deviated from the policy, follows as an addendum.
+Policy miss has no such leak.
+
+**Decision.** Signal confirmed for the policy-miss label (AUC 0.71 against baselines at chance), so step 2
+(2 M Lichess positions, `mining/lichess_eval.py`, labelling running) proceeds. The training decision waits
+for the filled cp-loss numbers and the off-policy comparison.
