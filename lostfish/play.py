@@ -67,6 +67,10 @@ def _ms(since: float) -> float:
 class SteeringPlayer:
     """certify → proxy → exploit search → steer.pick, with safe fallbacks at every stage."""
 
+    _steer_ms_ema: float | None = (
+        None  # running mean cost of a full steering pass (clock_skip rule)
+    )
+
     def __init__(
         self,
         cfg: Config | None = None,
@@ -195,6 +199,8 @@ class SteeringPlayer:
             elif time.monotonic() >= deadline or self._stop.is_set():  # no time to steer
                 move = certified.best.move
                 record.update(reason="fallback_best", deadline_hit=True)
+            elif self._clock_skip(deadline, record):  # low clock: steering could not finish
+                move, record["reason"] = certified.best.move, "clock_skip"
             else:
                 risky = self._predict_risk(board, certified, record, timings)
                 if risky is False:  # predictor gate: nothing worth the exact tree here
@@ -230,6 +236,22 @@ class SteeringPlayer:
         return move, record
 
     # ---------------------------------------------------------------- helpers
+
+    def _clock_skip(self, deadline: float, record: dict[str, Any]) -> bool:
+        """True when the time left before the soft deadline cannot fit a useful steering pass.
+
+        Steering needs at least two candidates evaluated before it can deviate, so with less than
+        `steer.clock_skip_ms` left, or less than `steer.clock_skip_factor` x the running mean of
+        recent steering passes, it would only burn clock. Node-limited moves get a >= 30 s soft
+        budget (timeman), so fixed-node gauntlets never skip.
+        """
+        left_ms = (deadline - time.monotonic()) * 1000.0
+        need = float(knob(self.cfg, "steer", "clock_skip_ms", 250))
+        if self._steer_ms_ema is not None:
+            factor = float(knob(self.cfg, "steer", "clock_skip_factor", 0.5))
+            need = max(need, factor * self._steer_ms_ema)
+        record["clock"] = {"left_ms": round(left_ms), "need_ms": round(need)}
+        return left_ms < need
 
     def _predict_risk(
         self,
@@ -309,6 +331,11 @@ class SteeringPlayer:
         timings["steer"] = _ms(t)
         timings.update({k: round(v, 2) for k, v in result.timings_ms.items()})
         record.update(reason=result.reason, deadline_hit=result.deadline_hit)
+        if not result.deadline_hit and not self._stop.is_set():  # a complete pass: learn its cost
+            ema = self._steer_ms_ema
+            self._steer_ms_ema = (
+                timings["steer"] if ema is None else 0.8 * ema + 0.2 * timings["steer"]
+            )
         if result.error:
             record["error"] = result.error
         return result.move, result.scored

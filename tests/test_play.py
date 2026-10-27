@@ -266,3 +266,20 @@ def test_end_to_end_bullet_budget_with_real_engines():
         json.dumps(rec, allow_nan=False)
     finally:
         player.close()
+
+
+def test_low_clock_skips_steering_and_plays_best():
+    player, _ = make_player()
+    move, rec = player.choose(chess.Board(), FakeBudget(soft_ms=100))  # below steer.clock_skip_ms
+    assert rec["reason"] == "clock_skip" and move.uci() == rec["best"]
+    assert rec["clock"]["need_ms"] >= 250 and not rec["deadline_hit"]
+    assert "steer" not in rec["timings_ms"]
+
+
+def test_clock_skip_scales_with_measured_steering_cost():
+    player, _ = make_player()
+    player._steer_ms_ema = 2000.0  # recent steering passes took ~2 s
+    _, rec = player.choose(chess.Board(), FakeBudget(soft_ms=900))  # < 0.5 x 2000
+    assert rec["reason"] == "clock_skip"
+    _, rec = player.choose(chess.Board(), FakeBudget(soft_ms=1500))
+    assert rec["reason"] != "clock_skip" and rec["clock"]["left_ms"] >= rec["clock"]["need_ms"]

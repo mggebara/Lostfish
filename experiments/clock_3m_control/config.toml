@@ -1,0 +1,35 @@
+# Control for the clock-safety gate: tolerance 0 (never deviates) under the same 3+0 clock against the same
+# fixed-node victim and openings as clock_3m_tree2. Profile _generic: no lc0 proxy process is needed.
+rounds = 100
+games = 2
+concurrency = 3
+openings = "experiments/openings/8moves_v3.pgn"
+openings_format = "pgn"
+openings_order = "random"
+openings_plies = 16
+srand = 20261028
+ratinginterval = 20
+tb = "tb/syzygy"
+tbpieces = 5
+
+[each]
+
+[[engine]]
+name = "LostFish-v2-tol0-3m"
+cmd = "scripts/lostfish"
+args = "--config configs/variants/v2_tol0.yaml"
+tc = "180+0"
+[engine.options]
+Steering = true
+Profile = "_generic"
+Hash = 64
+SyzygyPath = "{root}/tb/syzygy"
+
+[[engine]]
+name = "lc0-t1-n200"
+cmd = "engines/lc0"
+nodes = 200
+[engine.options]
+WeightsFile = "{root}/engines/lc0nets/t1-256x10-distilled-swa-2432500.pb.gz"
+Threads = 1
+BackendOptions = "max_batch=256"
