@@ -834,3 +834,28 @@ admitting moves BT4 punishes. Next on the GPU after the blind-spot passes: the B
 off, certify 100k) and the BT4 tree point with the exact BT4 proxy, 200 rounds × 2 each on the same
 openings; the control measures the per-move cost of a 100k MultiPV certify plus 1000-node BT4 proxy
 searches before the tree point commits to it.
+
+## 2026-10-27 05:30 — cheap labels step 2b: the 2 M Lichess labels are exact; the raw T1 net blunders at 7.65 % there, 7.53 % on-policy
+
+**Change.** The Stockfish@100k fill of the 294,910 censored Lichess rows finished (265,942 rows in 2.85 h on
+4 workers after a relaunch; 294,880 filled in all, 30 unfillable). The first launch had died at 28,938 rows:
+the Lichess evaluation DB contains positions Stockfish refuses (one with eight rooks a side exits with code 1),
+and the worker that hit one swallowed every later `EngineTerminatedError` and drained the queue in a minute.
+`mining/cheap_labels_fill.py` now reopens the engine and retries once (test in `tests/test_cheap_labels_fill.py`);
+the relaunch logged 60 such deaths, all recovered.
+
+**Measurement** (raw T1 net, top-policy move, loss ≥ 100 cp, exact labels):
+
+| | Lichess 2 M (off-policy) | control-vs-lc0@200 games (on-policy, 264k) |
+|---|---|---|
+| raw-top blunder rate | 7.65 % | 7.53 % |
+| by phase: opening / middlegame / endgame | 3.4 / 12.8 / 7.7 % | 3.2 / 9.1 / 7.4 % |
+| raw top = Stockfish best | 54.5 % | 52.1 % |
+
+The 4.2–17.4 % interval from the censored labels collapses to 7.65 %, within 0.1 points of the on-policy
+rate; openings and endgames match to within 0.3 points and the Lichess middlegames err more often (users
+analyse their sharp positions). `training/cheap_dataset.py` therefore keeps all 2 M rows for pretraining.
+
+**Decision.** The pretraining protocol runs as queued (scratch c128b8 on the 264k on-policy rows, then
+3 epochs on the 2 M cheap rows, then fine-tuning from that checkpoint), after the BT4 Lichess pass releases
+the GPU. The comparison that matters is validation AUC on held-out on-policy games, scratch vs fine-tuned.
