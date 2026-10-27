@@ -70,21 +70,42 @@ def raw_top_loss(engine: Any, fen: str, raw_top: str, cp_best: int, nodes: int) 
 
 
 _ENGINE: Any = None
+_ENGINE_ARGS: tuple[str, int] = ("", 16)
 
 
 def _init_worker(stockfish: str, hash_mb: int) -> None:
-    global _ENGINE
+    global _ENGINE, _ENGINE_ARGS
+    _ENGINE_ARGS = (stockfish, hash_mb)
     _ENGINE = open_engine(stockfish, hash_mb=hash_mb)
 
 
+def _valid(fen: str) -> bool:
+    try:
+        return chess.Board(fen).is_valid()
+    except ValueError:
+        return False
+
+
 def _work(tasks: list[Task]) -> list[tuple[str, int]]:
+    """Fill one chunk. A dead engine (Stockfish exits on some malformed positions) is reopened and the
+    task retried once, so one bad FEN cannot turn the worker into a sink that skips the rest of the queue."""
+    global _ENGINE
     assert _ENGINE is not None
     out = []
     for fen, top, cp_best, nodes in tasks:
-        try:
-            out.append((fen, raw_top_loss(_ENGINE, fen, top, cp_best, nodes)))
-        except (chess.engine.EngineError, ValueError) as exc:
-            _log(f"skipped {fen}: {exc!r}")
+        if not _valid(fen):
+            _log(f"skipped {fen}: invalid position")
+            continue
+        for attempt in (1, 2):
+            try:
+                out.append((fen, raw_top_loss(_ENGINE, fen, top, cp_best, nodes)))
+                break
+            except chess.engine.EngineTerminatedError as exc:
+                _log(f"engine died on {fen} (attempt {attempt}): {exc!r}; reopening")
+                _ENGINE = open_engine(_ENGINE_ARGS[0], hash_mb=_ENGINE_ARGS[1])
+            except (chess.engine.EngineError, ValueError) as exc:
+                _log(f"skipped {fen}: {exc!r}")
+                break
     return out
 
 

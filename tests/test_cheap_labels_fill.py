@@ -5,8 +5,10 @@ from __future__ import annotations
 import math
 
 import chess
+import chess.engine
 import pandas as pd
 
+import mining.cheap_labels_fill as clf
 from mining.cheap_labels_fill import apply_fill, pending, raw_top_loss
 
 F1, F2, F3 = chess.STARTING_FEN, "8/8/8/8/8/8/8/K6k w - - 0 1", "8/8/8/8/8/8/8/k6K b - - 0 1"
@@ -56,3 +58,37 @@ class _Engine:
 def test_raw_top_loss_is_from_the_parent_mover() -> None:
     # white to move, cp_best 20; after g1f3 black is to move and the engine says +50 for black -> -50 for white
     assert raw_top_loss(_Engine(), F1, "g1f3", 20, 100) == 70
+
+
+EIGHT_ROOKS = "rrrrkrrr/pppppppp/8/8/8/8/PPPPPPPP/RRRRKRRR w KQkq - 0 1"  # python-chess: valid; Stockfish: exit 1
+NO_WHITE_KING = "8/8/8/8/8/8/8/k7 w - - 0 1"
+
+
+def test_work_reopens_a_dead_engine_and_skips_invalid_positions(monkeypatch) -> None:
+    opened: list[str] = []
+    monkeypatch.setattr(clf, "open_engine", lambda sf, hash_mb=16: opened.append(sf) or object())
+    calls: list[str] = []
+
+    def loss(engine, fen, top, cp_best, nodes):
+        calls.append(fen)
+        if len(calls) == 1:
+            raise chess.engine.EngineTerminatedError("engine process died unexpectedly")
+        return 42
+
+    monkeypatch.setattr(clf, "raw_top_loss", loss)
+    clf._init_worker("sf-bin", 16)
+    good = chess.STARTING_FEN
+    tasks = [
+        (NO_WHITE_KING, "a1a2", 0, 100),
+        ("not a fen", "a1a2", 0, 100),
+        (EIGHT_ROOKS, "a1a2", 0, 100),
+        (good, "e2e4", 20, 100),
+    ]
+    out = clf._work(tasks)
+    assert out == [(EIGHT_ROOKS, 42), (good, 42)]
+    assert calls == [
+        EIGHT_ROOKS,
+        EIGHT_ROOKS,
+        good,
+    ]  # invalid FENs never reach the engine; the killer is retried
+    assert opened == ["sf-bin", "sf-bin"]  # initial open + one reopen after the death
